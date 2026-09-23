@@ -1,0 +1,13 @@
+{
+  "name": "stremio-kids-age",
+  "version": "1.0.0",
+  "description": "Stremio addon: мультфильмы и фильмы по возрасту ребёнка (TMDB)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
