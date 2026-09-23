@@ -10,8 +10,6 @@
 https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@main/kids_age.js
 ```
 
-(пока изменения не слиты в `main`, используйте `@claude/vigilant-hopper-wbzlew` вместо `@main`).
-
 После перезапуска в левом меню появится пункт **«Детям»**.
 
 ## Как работает
