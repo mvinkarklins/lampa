@@ -1,0 +1,241 @@
+/*
+ * Lampa plugin: «Детям по возрасту»
+ * Подбор фильмов, мультфильмов и мультсериалов по возрасту ребёнка (данные TMDB).
+ */
+(function () {
+    'use strict';
+
+    if (window.kids_age_plugin) return;
+    window.kids_age_plugin = true;
+
+    var STORAGE_KEY = 'kids_age_last';
+
+    // Жанры TMDB
+    var G = {
+        animation: 16,
+        family: 10751,
+        adventure: 12,
+        fantasy: 14,
+        comedy: 35,
+        scifi: 878,
+        // исключаемые для детей
+        horror: 27,
+        thriller: 53,
+        crime: 80,
+        war: 10752,
+        // сериалы
+        tv_kids: 10762,
+        tv_action: 10759,
+        tv_scifi: 10765,
+        tv_war: 10768,
+        tv_news: 10763,
+        tv_reality: 10764,
+        tv_soap: 10766,
+        tv_talk: 10767
+    };
+
+    var MOVIE_EXCLUDE = [G.horror, G.thriller, G.crime, G.war].join(',');
+    var TV_EXCLUDE = [G.crime, G.tv_war, G.tv_news, G.tv_reality, G.tv_soap, G.tv_talk, G.horror].join(',');
+
+    /*
+     * Возрастные группы.
+     * cert  — максимальный рейтинг MPAA (США), по нему TMDB фильтрует фильмы.
+     * tv    — жанры для сериалов (у сериалов фильтр по рейтингу в TMDB ненадёжен).
+     * runtime — ограничение длительности фильма (для самых маленьких).
+     */
+    var AGES = [
+        { id: '0-3',   title: '0–3 года',   cert: 'G',     runtime: 80, tv: [G.tv_kids],                          live_action: false },
+        { id: '4-6',   title: '4–6 лет',    cert: 'G',     tv: [G.tv_kids],                                       live_action: true },
+        { id: '7-9',   title: '7–9 лет',    cert: 'PG',    tv: [G.tv_kids, G.animation],                          live_action: true },
+        { id: '10-12', title: '10–12 лет',  cert: 'PG',    tv: [G.tv_kids, G.animation, G.family],                live_action: true },
+        { id: '13-15', title: '13–15 лет',  cert: 'PG-13', tv: [G.animation, G.family, G.tv_action, G.tv_scifi],  live_action: true }
+    ];
+
+    function ageById(id) {
+        for (var i = 0; i < AGES.length; i++) if (AGES[i].id === id) return AGES[i];
+        return null;
+    }
+
+    function today() {
+        return new Date().toISOString().slice(0, 10);
+    }
+
+    function query(base, params) {
+        var parts = [];
+        for (var k in params) {
+            if (params[k] !== undefined && params[k] !== null && params[k] !== '') parts.push(k + '=' + params[k]);
+        }
+        return base + '?' + parts.join('&');
+    }
+
+    var SORTS = {
+        popular: { sort_by: 'popularity.desc', 'vote_count.gte': 50 },
+        top:     { sort_by: 'vote_average.desc', 'vote_count.gte': 300 },
+        fresh:   { sort_by: 'popularity.desc', 'vote_count.gte': 10 }
+    };
+
+    function freshFrom() {
+        return (new Date().getFullYear() - 2) + '-01-01';
+    }
+
+    // Фильмы / мультфильмы
+    function movieUrl(age, kind, sort) {
+        var p = {
+            include_adult: 'false',
+            certification_country: 'US',
+            'certification.lte': age.cert,
+            without_genres: MOVIE_EXCLUDE
+        };
+
+        if (kind === 'cartoons') {
+            p.with_genres = G.animation;
+        } else {
+            // живые фильмы: семейные, но не анимация
+            p.with_genres = G.family;
+            p.without_genres = MOVIE_EXCLUDE + ',' + G.animation;
+        }
+
+        if (age.runtime) p['with_runtime.lte'] = age.runtime;
+
+        var s = SORTS[sort];
+        for (var k in s) p[k] = s[k];
+
+        if (sort === 'fresh') {
+            p['primary_release_date.gte'] = freshFrom();
+            p['primary_release_date.lte'] = today();
+        }
+
+        return query('discover/movie', p);
+    }
+
+    // Мультсериалы / сериалы
+    function tvUrl(age, kind, sort) {
+        var p = {
+            include_adult: 'false',
+            without_genres: TV_EXCLUDE
+        };
+
+        if (kind === 'cartoon_series') {
+            // для младших — только «детский» жанр, для старших — любая анимация
+            p.with_genres = age.id === '10-12' || age.id === '13-15' ? String(G.animation) : G.animation + ',' + G.tv_kids;
+        } else {
+            // все подходящие сериалы для возраста, кроме анимации
+            p.with_genres = age.tv.join('|');
+            p.without_genres = TV_EXCLUDE + ',' + G.animation;
+        }
+
+        var s = SORTS[sort];
+        for (var k in s) p[k] = s[k];
+
+        if (sort === 'top') p['vote_count.gte'] = 100;
+
+        if (sort === 'fresh') {
+            p['first_air_date.gte'] = freshFrom();
+            p['first_air_date.lte'] = today();
+        }
+
+        return query('discover/tv', p);
+    }
+
+    function sections(age) {
+        var list = [
+            { title: 'Мультфильмы — популярные',   url: movieUrl(age, 'cartoons', 'popular') },
+            { title: 'Мультфильмы — лучшие',       url: movieUrl(age, 'cartoons', 'top') },
+            { title: 'Мультфильмы — новинки',      url: movieUrl(age, 'cartoons', 'fresh') },
+            { title: 'Мультсериалы — популярные',  url: tvUrl(age, 'cartoon_series', 'popular') },
+            { title: 'Мультсериалы — лучшие',      url: tvUrl(age, 'cartoon_series', 'top') }
+        ];
+
+        if (age.live_action) {
+            list.push(
+                { title: 'Фильмы — популярные', url: movieUrl(age, 'films', 'popular') },
+                { title: 'Фильмы — лучшие',     url: movieUrl(age, 'films', 'top') },
+                { title: 'Фильмы — новинки',    url: movieUrl(age, 'films', 'fresh') },
+                { title: 'Сериалы — популярные', url: tvUrl(age, 'series', 'popular') }
+            );
+        }
+
+        return list;
+    }
+
+    function openList(age, item) {
+        Lampa.Activity.push({
+            url: item.url,
+            title: item.title + ' (' + age.title + ')',
+            component: 'category_full',
+            source: 'tmdb',
+            card_type: true,
+            page: 1
+        });
+    }
+
+    function showSections(age) {
+        Lampa.Select.show({
+            title: 'Детям ' + age.title,
+            items: sections(age),
+            onSelect: function (item) {
+                openList(age, item);
+            },
+            onBack: function () {
+                showAges();
+            }
+        });
+    }
+
+    function showAges() {
+        var last = Lampa.Storage.get(STORAGE_KEY, '');
+
+        var items = AGES.map(function (age) {
+            return {
+                title: age.title,
+                subtitle: 'рейтинг до ' + age.cert,
+                selected: age.id === last,
+                age: age
+            };
+        });
+
+        Lampa.Select.show({
+            title: 'Возраст ребёнка',
+            items: items,
+            onSelect: function (item) {
+                Lampa.Storage.set(STORAGE_KEY, item.age.id);
+                showSections(item.age);
+            },
+            onBack: function () {
+                Lampa.Controller.toggle('menu');
+            }
+        });
+    }
+
+    var ICON = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+        '<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>' +
+        '<circle cx="9" cy="10" r="1.3" fill="currentColor"/>' +
+        '<circle cx="15" cy="10" r="1.3" fill="currentColor"/>' +
+        '<path d="M8.5 14.5c.9 1.2 2.1 1.8 3.5 1.8s2.6-.6 3.5-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+        '</svg>';
+
+    function addMenu() {
+        var item = $('<li class="menu__item selector" data-action="kids_age">' +
+            '<div class="menu__ico">' + ICON + '</div>' +
+            '<div class="menu__text">Детям</div>' +
+            '</li>');
+
+        item.on('hover:enter', showAges);
+
+        $('.menu .menu__list').eq(0).append(item);
+    }
+
+    function start() {
+        addMenu();
+    }
+
+    if (window.appready) start();
+    else {
+        Lampa.Listener.follow('app', function (e) {
+            if (e.type === 'ready') start();
+        });
+    }
+
+    // экспорт для отладки
+    window.kids_age_plugin_api = { ages: AGES, sections: sections, age: ageById };
+})();
