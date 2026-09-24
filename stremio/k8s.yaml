@@ -1,0 +1,129 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: stremio
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stremio-kids
+  namespace: stremio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stremio-kids
+  template:
+    metadata:
+      labels:
+        app: stremio-kids
+    spec:
+      containers:
+        - name: addon
+          image: docker.io/library/stremio-kids:1.1.0
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 7000
+          env:
+            - name: TMDB_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: tmdb
+                  key: api-key
+                  optional: true
+            - name: LANGUAGE
+              value: ru-RU
+            - name: DEFAULT_AGE
+              value: "4-6"
+            - name: PUBLIC_URL
+              value: https://stremio.ltditdude.com
+          volumeMounts:
+            - name: posters
+              mountPath: /tmp/posters
+          readinessProbe:
+            httpGet:
+              path: /manifest.json
+              port: 7000
+          resources:
+            requests:
+              cpu: 10m
+              memory: 96Mi
+            limits:
+              memory: 384Mi
+        - name: tls
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 8443
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d
+            - name: tls
+              mountPath: /etc/nginx/tls
+              readOnly: true
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+      volumes:
+        - name: posters
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: nginx-conf
+          configMap:
+            name: stremio-kids-nginx
+        - name: tls
+          secret:
+            secretName: wildcard-ltditdude-tls
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stremio-kids-nginx
+  namespace: stremio
+data:
+  default.conf: |
+    server {
+      listen 8443 ssl;
+      server_name _;
+      ssl_certificate     /etc/nginx/tls/tls.crt;
+      ssl_certificate_key /etc/nginx/tls/tls.key;
+      # Chrome/WebView (Private Network Access / Local Network Access):
+      # web.stremio.com обращается к адресу в локальной сети только после preflight
+      location / {
+        if ($request_method = OPTIONS) {
+          add_header Access-Control-Allow-Origin * always;
+          add_header Access-Control-Allow-Methods "GET, OPTIONS" always;
+          add_header Access-Control-Allow-Headers * always;
+          add_header Access-Control-Allow-Private-Network true always;
+          add_header Access-Control-Max-Age 86400 always;
+          return 204;
+        }
+        add_header Access-Control-Allow-Private-Network true always;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+        proxy_pass http://127.0.0.1:7000;
+      }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stremio-kids
+  namespace: stremio
+  annotations:
+    coredns.io/hostname: stremio.ltditdude.com
+spec:
+  type: LoadBalancer
+  loadBalancerIP: 192.168.1.2
+  selector:
+    app: stremio-kids
+  ports:
+    - name: http
+      port: 80
+      targetPort: 7000
+    - name: https
+      port: 443
+      targetPort: 8443
