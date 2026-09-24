@@ -47,6 +47,13 @@ TMDB_API_KEY=ваш_ключ npm start
 
 ```
 cd stremio
+TMDB_API_KEY=ваш_ключ docker compose up -d --build
+```
+
+Или без compose:
+
+```
+cd stremio
 docker build -t stremio-kids .
 docker run -d -p 7000:7000 -e TMDB_API_KEY=ваш_ключ stremio-kids
 ```
