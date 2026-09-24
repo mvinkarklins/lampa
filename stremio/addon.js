@@ -46,6 +46,7 @@ var DEFAULT_AGE = process.env.DEFAULT_AGE || '4-6';
 var SETS = [
     { id: 'cartoons',       type: 'movie',  emoji: '🎨', title: 'Мультфильмы',  name: 'Мультфильмы для детей' },
     { id: 'new',            type: 'movie',  emoji: '✨', title: 'Новинки',      name: 'Новые мультфильмы', shape: 'landscape' },
+    { id: 'latest',         type: 'movie',  emoji: '🆕', title: 'Свежие',       name: 'Свежие мультфильмы' },
     { id: 'cartoon_series', type: 'series', emoji: '📺', title: 'Мультсериалы', name: 'Мультсериалы' },
     { id: 'films',          type: 'movie',  emoji: '🎬', title: 'Кино',         name: 'Детское кино' },
     { id: 'series',         type: 'series', emoji: '🍿', title: 'Сериалы',      name: 'Сериалы для детей' }
@@ -77,7 +78,7 @@ function daysAgo(n) {
 function manifest(base) {
     return {
         id: 'community.kids.age',
-        version: '1.1.0',
+        version: '1.2.0',
         name: 'Детям по возрасту',
         description: 'Мультфильмы, фильмы и мультсериалы, подобранные по возрасту ребёнка (TMDB). Возраст выбирается в фильтре каталога.',
         logo: base + '/logo.png',
@@ -103,7 +104,7 @@ function manifest(base) {
 function discoverParams(setId, age) {
     var p = { include_adult: 'false', sort_by: 'popularity.desc', 'vote_count.gte': 50 };
 
-    if (setId === 'cartoons' || setId === 'films' || setId === 'new') {
+    if (setId === 'cartoons' || setId === 'films' || setId === 'new' || setId === 'latest') {
         p.certification_country = 'US';
         p['certification.lte'] = age.cert;
         p['primary_release_date.lte'] = today();
@@ -120,6 +121,12 @@ function discoverParams(setId, age) {
         if (setId === 'new') {
             p['primary_release_date.gte'] = daysAgo(365);
             p['vote_count.gte'] = 5;
+        }
+
+        // самые последние вышедшие: по дате выхода, а не по популярности
+        if (setId === 'latest') {
+            p.sort_by = 'primary_release_date.desc';
+            p['vote_count.gte'] = 3;
         }
 
         return { path: 'discover/movie', params: p };
