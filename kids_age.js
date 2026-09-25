@@ -8,6 +8,9 @@
     if (window.kids_age_plugin) return;
     window.kids_age_plugin = true;
 
+    // Версия плагина: видна в заголовке выбора возраста, чтобы отличать dev от prod
+    var VERSION = '2.0.0';
+
     var STORAGE_KEY = 'kids_age_last';
 
     // Жанры TMDB
@@ -244,7 +247,7 @@
         });
 
         Lampa.Select.show({
-            title: 'Возраст ребёнка',
+            title: 'Возраст ребёнка · v' + VERSION,
             items: items,
             onSelect: function (item) {
                 Lampa.Storage.set(STORAGE_KEY, item.age.id);
@@ -286,5 +289,5 @@
     }
 
     // экспорт для отладки
-    window.kids_age_plugin_api = { ages: AGES, sections: sections, age: ageById };
+    window.kids_age_plugin_api = { version: VERSION, ages: AGES, sections: sections, age: ageById };
 })();

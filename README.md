@@ -7,10 +7,25 @@
 Настройки → Расширения → Добавить плагин → вставьте ссылку:
 
 ```
-https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@main/kids_age.js
+https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/kids_age.js
 ```
 
-После перезапуска в левом меню появится пункт **«Детям»**.
+После перезапуска в левом меню появится пункт **«Детям»**. Номер версии виден в заголовке окна выбора возраста.
+
+## Разработка и выпуск
+
+Есть две ссылки на плагин:
+
+| | Ссылка | Что отдаёт | Обновление |
+|---|---|---|---|
+| **prod** | `https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/kids_age.js` | последний выпуск (тег `vX.Y.Z`) | после выпуска, до 12 часов |
+| **dev** | `https://mvinkarklins.github.io/lampa/kids_age.js` | текущее состояние ветки `main` (GitHub Pages) | через 1–2 минуты после push |
+
+Для проверки изменений поставьте в Лампу dev-ссылку. Когда всё работает, выпустите версию:
+
+1. Поднимите `VERSION` в `kids_age.js` и сделайте коммит.
+2. Поставьте тег и отправьте его: `git tag v2.0.1 && git push origin v2.0.1`.
+3. Сбросьте кэш jsDelivr: откройте `https://purge.jsdelivr.net/gh/mvinkarklins/lampa@latest/kids_age.js`.
 
 ## Как работает
 
