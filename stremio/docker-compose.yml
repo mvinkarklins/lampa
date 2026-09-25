@@ -2,7 +2,7 @@
 services:
   stremio-kids:
     build: .
-    image: stremio-kids:1.2.0
+    image: stremio-kids:1.3.0
     container_name: stremio-kids
     restart: unless-stopped
     ports:

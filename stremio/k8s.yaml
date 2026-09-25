@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: addon
-          image: docker.io/library/stremio-kids:1.2.0
+          image: docker.io/library/stremio-kids:1.3.0
           imagePullPolicy: Never
           ports:
             - containerPort: 7000

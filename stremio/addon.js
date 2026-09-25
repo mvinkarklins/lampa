@@ -42,14 +42,19 @@ var AGES = [
 
 var DEFAULT_AGE = process.env.DEFAULT_AGE || '4-6';
 
-// Подборки, id каталога = kids_<set>
+// Подборки, id каталога = kids_<set>.
+// base — что отбираем (мультфильмы, кино, мультсериалы, сериалы), mode — как сортируем:
+// new — популярное за год, latest — по дате выхода, box_office — по сборам, hits — по числу оценок.
 var SETS = [
-    { id: 'cartoons',       type: 'movie',  emoji: '🎨', title: 'Мультфильмы',  name: 'Мультфильмы для детей' },
-    { id: 'new',            type: 'movie',  emoji: '✨', title: 'Новинки',      name: 'Новые мультфильмы', shape: 'landscape' },
-    { id: 'latest',         type: 'movie',  emoji: '🆕', title: 'Свежие',       name: 'Свежие мультфильмы' },
-    { id: 'cartoon_series', type: 'series', emoji: '📺', title: 'Мультсериалы', name: 'Мультсериалы' },
-    { id: 'films',          type: 'movie',  emoji: '🎬', title: 'Кино',         name: 'Детское кино' },
-    { id: 'series',         type: 'series', emoji: '🍿', title: 'Сериалы',      name: 'Сериалы для детей' }
+    { id: 'cartoons',         base: 'cartoons',       type: 'movie',  emoji: '🎨', name: 'Мультфильмы для детей' },
+    { id: 'new',              base: 'cartoons',       type: 'movie',  emoji: '✨', name: 'Новые мультфильмы', mode: 'new', shape: 'landscape' },
+    { id: 'latest',           base: 'cartoons',       type: 'movie',  emoji: '🆕', name: 'Свежие мультфильмы', mode: 'latest' },
+    { id: 'box_office',       base: 'cartoons',       type: 'movie',  emoji: '💰', name: 'Кассовые мультфильмы', mode: 'box_office' },
+    { id: 'cartoon_series',   base: 'cartoon_series', type: 'series', emoji: '📺', name: 'Мультсериалы' },
+    { id: 'films',            base: 'films',          type: 'movie',  emoji: '🎬', name: 'Детское кино' },
+    { id: 'films_box_office', base: 'films',          type: 'movie',  emoji: '💰', name: 'Кассовое детское кино', mode: 'box_office' },
+    { id: 'series',           base: 'series',         type: 'series', emoji: '🍿', name: 'Сериалы для детей' },
+    { id: 'series_hits',      base: 'series',         type: 'series', emoji: '🔥', name: 'Хиты сериалов', mode: 'hits' }
 ];
 
 var MOVIE_CERTS = ['G', 'PG', 'PG-13'];
@@ -78,9 +83,9 @@ function daysAgo(n) {
 function manifest(base) {
     return {
         id: 'community.kids.age',
-        version: '1.2.0',
+        version: '1.3.0',
         name: 'Детям по возрасту',
-        description: 'Мультфильмы, фильмы и мультсериалы, подобранные по возрасту ребёнка (TMDB). Возраст выбирается в фильтре каталога.',
+        description: 'Мультфильмы, фильмы и сериалы, подобранные по возрасту ребёнка (TMDB). Возраст выбирается в фильтре каталога.',
         logo: base + '/logo.png',
         background: base + '/background.jpg',
         resources: ['catalog'],
@@ -101,16 +106,16 @@ function manifest(base) {
 }
 
 // Параметры запроса discover для подборки и возраста
-function discoverParams(setId, age) {
+function discoverParams(set, age) {
     var p = { include_adult: 'false', sort_by: 'popularity.desc', 'vote_count.gte': 50 };
 
-    if (setId === 'cartoons' || setId === 'films' || setId === 'new' || setId === 'latest') {
+    if (set.type === 'movie') {
         p.certification_country = 'US';
         p['certification.lte'] = age.cert;
         p['primary_release_date.lte'] = today();
         if (age.runtime) p['with_runtime.lte'] = age.runtime;
 
-        if (setId === 'films') {
+        if (set.base === 'films') {
             p.with_genres = G.family;
             p.without_genres = MOVIE_EXCLUDE + ',' + G.animation;
         } else {
@@ -118,15 +123,22 @@ function discoverParams(setId, age) {
             p.without_genres = MOVIE_EXCLUDE;
         }
 
-        if (setId === 'new') {
+        if (set.mode === 'new') {
             p['primary_release_date.gte'] = daysAgo(365);
             p['vote_count.gte'] = 5;
         }
 
         // самые последние вышедшие: по дате выхода, а не по популярности
-        if (setId === 'latest') {
+        if (set.mode === 'latest') {
             p.sort_by = 'primary_release_date.desc';
             p['vote_count.gte'] = 3;
+        }
+
+        // больше всего собрали в прокате за последние три года.
+        // Кассовых фильмов с рейтингом G мало, поэтому для малышей берём десять лет.
+        if (set.mode === 'box_office') {
+            p.sort_by = 'revenue.desc';
+            p['primary_release_date.gte'] = daysAgo((age.cert === 'G' ? 10 : 3) * 365);
         }
 
         return { path: 'discover/movie', params: p };
@@ -136,12 +148,19 @@ function discoverParams(setId, age) {
     p.certification_country = 'US';
     p.certification = age.tvCerts.join('|');
 
-    if (setId === 'cartoon_series') {
+    if (set.base === 'cartoon_series') {
         p.with_genres = age.id === '10-12' || age.id === '13-15' ? String(G.animation) : G.animation + ',' + G.tv_kids;
         p.without_genres = TV_EXCLUDE;
     } else {
         p.with_genres = age.tv.join('|');
         p.without_genres = TV_EXCLUDE + ',' + G.animation;
+    }
+
+    // сборов у сериалов нет: хиты — больше всего оценок среди тех, что выходили последние три года
+    // (для младших детских сериалов мало, им — десять лет)
+    if (set.mode === 'hits') {
+        p.sort_by = 'vote_count.desc';
+        p['air_date.gte'] = daysAgo((age.tvCerts.indexOf('TV-PG') >= 0 ? 3 : 10) * 365);
     }
 
     return { path: 'discover/tv', params: p };
@@ -189,6 +208,7 @@ function details(kind, tmdbId) {
             cert: usCert(kind, d),
             runtime: d.runtime || (d.episode_run_time || [])[0] || 0,
             seasons: d.number_of_seasons || 0,
+            revenue: d.revenue || 0,
             genres: (d.genres || []).map(function (g) { return g.name.charAt(0).toUpperCase() + g.name.slice(1); })
         };
         infoCache.set(key, { time: Date.now(), value: value });
@@ -219,6 +239,18 @@ function runtimeText(min) {
     return ((h ? h + ' ч ' : '') + (m ? m + ' мин' : '')).trim();
 }
 
+// Сборы: 1 234 567 890 → «1,2 млрд $»
+function money(n) {
+    if (n >= 1e9) return (n / 1e9).toFixed(1).replace('.', ',') + ' млрд $';
+    if (n >= 1e6) return Math.round(n / 1e6) + ' млн $';
+    return '';
+}
+
+// Число оценок: 12345 → «12 тыс. оценок»
+function votes(n) {
+    return n >= 1000 ? Math.round(n / 1000) + ' тыс. оценок' : plural(n, 'оценка', 'оценки', 'оценок');
+}
+
 function toMeta(entry, set, age, base) {
     var item = entry.item, info = entry.info;
     var date = item.release_date || item.first_air_date || '';
@@ -229,7 +261,9 @@ function toMeta(entry, set, age, base) {
 
     var length = set.type === 'movie' ? runtimeText(info.runtime)
         : info.seasons ? plural(info.seasons, 'сезон', 'сезона', 'сезонов') : '';
-    var line = [label + '+', length, info.genres.slice(0, 3).join(', ')].filter(Boolean).join(' · ');
+    var box = set.mode === 'box_office' && info.revenue ? '💰 ' + money(info.revenue)
+        : set.mode === 'hits' && item.vote_count ? '🔥 ' + votes(item.vote_count) : '';
+    var line = [label + '+', box, length, info.genres.slice(0, 3).join(', ')].filter(Boolean).join(' · ');
 
     return {
         id: info.imdb,
@@ -285,7 +319,7 @@ function collected(set, age, need) {
     function more() {
         if (list.entries.length >= need || list.page >= list.total) return Promise.resolve(list.entries);
 
-        var d = discoverParams(set.id, age);
+        var d = discoverParams(set, age);
         d.params.page = list.page + 1;
 
         return tmdb(d.path, d.params).then(function (data) {
@@ -294,7 +328,10 @@ function collected(set, age, need) {
 
             return Promise.all((data.results || []).map(function (item) {
                 return details(kind, item.id).then(function (info) {
-                    return info && info.imdb && allowed(kind, info.cert, age) ? { item: item, info: info } : null;
+                    if (!info || !info.imdb || !allowed(kind, info.cert, age)) return null;
+                    // в кассовые — только то, что шло в кино (от миллиона долларов сборов)
+                    if (set.mode === 'box_office' && info.revenue < 1e6) return null;
+                    return { item: item, info: info };
                 });
             }));
         }).then(function (entries) {
