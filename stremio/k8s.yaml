@@ -35,8 +35,6 @@ spec:
               value: ru-RU
             - name: DEFAULT_AGE
               value: "4-6"
-            - name: PUBLIC_URL
-              value: https://stremio.ltditdude.com
           volumeMounts:
             - name: posters
               mountPath: /tmp/posters
@@ -52,6 +50,7 @@ spec:
               memory: 384Mi
         - name: tls
           image: nginx:1.27-alpine
+          command: ["sh", "/etc/nginx/conf.d/start.sh"]
           ports:
             - containerPort: 8443
           volumeMounts:
@@ -60,6 +59,8 @@ spec:
             - name: tls
               mountPath: /etc/nginx/tls
               readOnly: true
+            - name: local-ip
+              mountPath: /etc/nginx/lip
           resources:
             requests:
               cpu: 5m
@@ -76,6 +77,8 @@ spec:
         - name: tls
           secret:
             secretName: wildcard-ltditdude-tls
+        - name: local-ip
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -83,30 +86,57 @@ metadata:
   name: stremio-kids-nginx
   namespace: stremio
 data:
+  # Два адреса:
+  #   https://192-168-1-2.local-ip.sh — публичный сертификат Let's Encrypt, работает на ТВ и в приложении Stremio
+  #   https://stremio.ltditdude.com   — сертификат домашнего CA, только там, где он установлен
   default.conf: |
     server {
-      listen 8443 ssl;
+      listen 8443 ssl default_server;
       server_name _;
       ssl_certificate     /etc/nginx/tls/tls.crt;
       ssl_certificate_key /etc/nginx/tls/tls.key;
-      # Chrome/WebView (Private Network Access / Local Network Access):
-      # web.stremio.com обращается к адресу в локальной сети только после preflight
-      location / {
-        if ($request_method = OPTIONS) {
-          add_header Access-Control-Allow-Origin * always;
-          add_header Access-Control-Allow-Methods "GET, OPTIONS" always;
-          add_header Access-Control-Allow-Headers * always;
-          add_header Access-Control-Allow-Private-Network true always;
-          add_header Access-Control-Max-Age 86400 always;
-          return 204;
-        }
-        add_header Access-Control-Allow-Private-Network true always;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 120s;
-        proxy_pass http://127.0.0.1:7000;
-      }
+      include /etc/nginx/conf.d/addon.inc;
     }
+    server {
+      listen 8443 ssl;
+      server_name *.local-ip.sh;
+      ssl_certificate     /etc/nginx/lip/server.pem;
+      ssl_certificate_key /etc/nginx/lip/server.key;
+      include /etc/nginx/conf.d/addon.inc;
+    }
+  addon.inc: |
+    # Chrome/WebView (Private Network Access / Local Network Access):
+    # web.stremio.com обращается к адресу в локальной сети только после preflight
+    location / {
+      if ($request_method = OPTIONS) {
+        add_header Access-Control-Allow-Origin * always;
+        add_header Access-Control-Allow-Methods "GET, OPTIONS" always;
+        add_header Access-Control-Allow-Headers * always;
+        add_header Access-Control-Allow-Private-Network true always;
+        add_header Access-Control-Max-Age 86400 always;
+        return 204;
+      }
+      add_header Access-Control-Allow-Private-Network true always;
+      proxy_set_header Host $host;
+      proxy_set_header X-Forwarded-Proto $scheme;
+      proxy_read_timeout 120s;
+      proxy_pass http://127.0.0.1:7000;
+    }
+  start.sh: |
+    # Сертификат *.local-ip.sh публикует сам сервис local-ip.sh. Скачиваем при старте
+    # и проверяем раз в 12 часов: Let's Encrypt выдаёт его на 90 дней.
+    D=/etc/nginx/lip
+    fetch() {
+      wget -q -T 20 -O $D/new.pem https://local-ip.sh/server.pem &&
+        wget -q -T 20 -O $D/new.key https://local-ip.sh/server.key &&
+        grep -q 'BEGIN CERTIFICATE' $D/new.pem && grep -q 'PRIVATE KEY' $D/new.key || return 1
+      cmp -s $D/new.pem $D/server.pem && return 1
+      mv $D/new.pem $D/server.pem && mv $D/new.key $D/server.key
+    }
+    # без интернета стартуем с домашним сертификатом, чтобы nginx всё равно поднялся
+    fetch || [ -s $D/server.pem ] || { cp /etc/nginx/tls/tls.crt $D/server.pem; cp /etc/nginx/tls/tls.key $D/server.key; }
+    ( while sleep 43200; do fetch && nginx -t -q && nginx -s reload; done ) &
+    exec nginx -g 'daemon off;'
 ---
 apiVersion: v1
 kind: Service
