@@ -39,16 +39,17 @@
 
     /*
      * Возрастные группы.
-     * cert  — максимальный рейтинг MPAA (США), по нему TMDB фильтрует фильмы.
-     * tv    — жанры для сериалов (у сериалов фильтр по рейтингу в TMDB ненадёжен).
+     * cert    — максимальный рейтинг MPAA (США) для фильмов.
+     * tvCerts — допустимые рейтинги сериалов (США); TMDB фильтрует их только списком.
+     * tv      — жанры для сериалов.
      * runtime — ограничение длительности фильма (для самых маленьких).
      */
     var AGES = [
-        { id: '0-3',   title: '0–3 года',   cert: 'G',     runtime: 80, tv: [G.tv_kids],                          live_action: false },
-        { id: '4-6',   title: '4–6 лет',    cert: 'G',     tv: [G.tv_kids],                                       live_action: true },
-        { id: '7-9',   title: '7–9 лет',    cert: 'PG',    tv: [G.tv_kids, G.animation],                          live_action: true },
-        { id: '10-12', title: '10–12 лет',  cert: 'PG',    tv: [G.tv_kids, G.animation, G.family],                live_action: true },
-        { id: '13-15', title: '13–15 лет',  cert: 'PG-13', tv: [G.animation, G.family, G.tv_action, G.tv_scifi],  live_action: true }
+        { id: '0-3',   title: '0–3 года',   cert: 'G',     runtime: 80, tv: [G.tv_kids], tvCerts: ['TV-Y', 'TV-G'], live_action: false },
+        { id: '4-6',   title: '4–6 лет',    cert: 'G',     tv: [G.tv_kids], tvCerts: ['TV-Y', 'TV-Y7', 'TV-G'], live_action: true },
+        { id: '7-9',   title: '7–9 лет',    cert: 'PG',    tv: [G.tv_kids, G.animation], tvCerts: ['TV-Y', 'TV-Y7', 'TV-G'], live_action: true },
+        { id: '10-12', title: '10–12 лет',  cert: 'PG',    tv: [G.tv_kids, G.animation, G.family], tvCerts: ['TV-Y', 'TV-Y7', 'TV-G', 'TV-PG'], live_action: true },
+        { id: '13-15', title: '13–15 лет',  cert: 'PG-13', tv: [G.animation, G.family, G.tv_action, G.tv_scifi], tvCerts: ['TV-Y', 'TV-Y7', 'TV-G', 'TV-PG'], live_action: true }
     ];
 
     function ageById(id) {
@@ -60,6 +61,23 @@
         return new Date().toISOString().slice(0, 10);
     }
 
+    function yearsAgo(n) {
+        return new Date(Date.now() - n * 365 * 86400000).toISOString().slice(0, 10);
+    }
+
+    // Кассовых фильмов и детских сериалов для малышей мало, поэтому для них окно шире
+    function hitsYears(age) {
+        return age.cert === 'G' ? 10 : 3;
+    }
+
+    // Допустимые рейтинги фильмов списком. Фильтр certification.lte не подходит:
+    // у рейтинга NR («без рейтинга») порядок 0, и он пропускает неоценённые фильмы.
+    var MOVIE_CERTS = ['G', 'PG', 'PG-13'];
+
+    function movieCerts(age) {
+        return MOVIE_CERTS.slice(0, MOVIE_CERTS.indexOf(age.cert) + 1).join('|');
+    }
+
     function query(base, params) {
         var parts = [];
         for (var k in params) {
@@ -68,10 +86,17 @@
         return base + '?' + parts.join('&');
     }
 
+    /*
+     * popular — популярные, top — лучшие по оценке, fresh — популярные за последние годы,
+     * latest — самые последние вышедшие, box_office — по сборам в прокате, hits — больше всего оценок.
+     */
     var SORTS = {
-        popular: { sort_by: 'popularity.desc', 'vote_count.gte': 50 },
-        top:     { sort_by: 'vote_average.desc', 'vote_count.gte': 300 },
-        fresh:   { sort_by: 'popularity.desc', 'vote_count.gte': 10 }
+        popular:    { sort_by: 'popularity.desc', 'vote_count.gte': 50 },
+        top:        { sort_by: 'vote_average.desc', 'vote_count.gte': 300 },
+        fresh:      { sort_by: 'popularity.desc', 'vote_count.gte': 10 },
+        latest:     { sort_by: 'primary_release_date.desc', 'vote_count.gte': 3 },
+        box_office: { sort_by: 'revenue.desc', 'vote_count.gte': 50 },
+        hits:       { sort_by: 'vote_count.desc', 'vote_count.gte': 50 }
     };
 
     function freshFrom() {
@@ -83,7 +108,7 @@
         var p = {
             include_adult: 'false',
             certification_country: 'US',
-            'certification.lte': age.cert,
+            certification: movieCerts(age),
             without_genres: MOVIE_EXCLUDE
         };
 
@@ -105,6 +130,14 @@
             p['primary_release_date.lte'] = today();
         }
 
+        if (sort === 'latest') p['primary_release_date.lte'] = today();
+
+        // фильмы без проката (сборы 0) при такой сортировке уходят в конец списка
+        if (sort === 'box_office') {
+            p['primary_release_date.gte'] = yearsAgo(hitsYears(age));
+            p['primary_release_date.lte'] = today();
+        }
+
         return query('discover/movie', p);
     }
 
@@ -112,7 +145,9 @@
     function tvUrl(age, kind, sort) {
         var p = {
             include_adult: 'false',
-            without_genres: TV_EXCLUDE
+            without_genres: TV_EXCLUDE,
+            certification_country: 'US',
+            certification: age.tvCerts.join('|')
         };
 
         if (kind === 'cartoon_series') {
@@ -134,6 +169,9 @@
             p['first_air_date.lte'] = today();
         }
 
+        // сборов у сериалов нет: хиты — больше всего оценок среди выходивших в последние годы
+        if (sort === 'hits') p['air_date.gte'] = yearsAgo(hitsYears(age));
+
         return query('discover/tv', p);
     }
 
@@ -142,8 +180,11 @@
             { title: 'Мультфильмы — популярные',   url: movieUrl(age, 'cartoons', 'popular') },
             { title: 'Мультфильмы — лучшие',       url: movieUrl(age, 'cartoons', 'top') },
             { title: 'Мультфильмы — новинки',      url: movieUrl(age, 'cartoons', 'fresh') },
+            { title: 'Мультфильмы — самые свежие', url: movieUrl(age, 'cartoons', 'latest') },
+            { title: 'Мультфильмы — кассовые',     url: movieUrl(age, 'cartoons', 'box_office') },
             { title: 'Мультсериалы — популярные',  url: tvUrl(age, 'cartoon_series', 'popular') },
-            { title: 'Мультсериалы — лучшие',      url: tvUrl(age, 'cartoon_series', 'top') }
+            { title: 'Мультсериалы — лучшие',      url: tvUrl(age, 'cartoon_series', 'top') },
+            { title: 'Мультсериалы — хиты',        url: tvUrl(age, 'cartoon_series', 'hits') }
         ];
 
         if (age.live_action) {
@@ -151,7 +192,9 @@
                 { title: 'Фильмы — популярные', url: movieUrl(age, 'films', 'popular') },
                 { title: 'Фильмы — лучшие',     url: movieUrl(age, 'films', 'top') },
                 { title: 'Фильмы — новинки',    url: movieUrl(age, 'films', 'fresh') },
-                { title: 'Сериалы — популярные', url: tvUrl(age, 'series', 'popular') }
+                { title: 'Фильмы — кассовые',   url: movieUrl(age, 'films', 'box_office') },
+                { title: 'Сериалы — популярные', url: tvUrl(age, 'series', 'popular') },
+                { title: 'Сериалы — хиты',       url: tvUrl(age, 'series', 'hits') }
             );
         }
 
