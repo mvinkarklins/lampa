@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: addon
-          image: docker.io/library/stremio-kids:1.3.0
+          image: docker.io/library/stremio-hits:2.0.0
           imagePullPolicy: Never
           ports:
             - containerPort: 7000
@@ -33,8 +33,6 @@ spec:
                   optional: true
             - name: LANGUAGE
               value: ru-RU
-            - name: DEFAULT_AGE
-              value: "4-6"
           volumeMounts:
             - name: posters
               mountPath: /tmp/posters

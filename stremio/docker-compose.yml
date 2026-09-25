@@ -1,18 +1,17 @@
 # Запуск: TMDB_API_KEY=ваш_ключ docker compose up -d --build
 services:
-  stremio-kids:
+  stremio-hits:
     build: .
-    image: stremio-kids:1.3.0
-    container_name: stremio-kids
+    image: stremio-hits:2.0.0
+    container_name: stremio-hits
     restart: unless-stopped
     ports:
       - "7000:7000"
     environment:
       TMDB_API_KEY: ${TMDB_API_KEY:?задайте TMDB_API_KEY}
       LANGUAGE: ru-RU
-      DEFAULT_AGE: "4-6"
       # внешний адрес для ссылок на постеры и иконку, если сервер стоит за прокси
-      # PUBLIC_URL: https://kids.example.com
+      # PUBLIC_URL: https://hits.example.com
     volumes:
       - posters:/tmp/posters
 

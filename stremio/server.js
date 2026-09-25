@@ -44,7 +44,7 @@ function binary(res, promise, type, maxAge) {
 }
 
 var CATALOG_ROUTE = /^\/catalog\/([^/]+)\/([^/]+?)(?:\/([^/]+))?\.json$/;
-var POSTER_ROUTE = /^\/poster\/(\d{1,2})\/(\d{1,3})\/(w342|w780)\/([A-Za-z0-9_-]+\.(?:jpg|png))$/;
+var POSTER_ROUTE = /^\/poster\/(\d{1,2}|x)\/(\d{1,3})\/(w342|w780)\/([A-Za-z0-9_-]+\.(?:jpg|png))$/;
 
 var server = http.createServer(function (req, res) {
     if (req.method === 'OPTIONS') return send(res, 204, '', 'text/plain');
@@ -56,7 +56,7 @@ var server = http.createServer(function (req, res) {
     if (url === '/background.jpg') return binary(res, assets.background(), 'image/jpeg', 86400);
 
     if ((m = url.match(POSTER_ROUTE))) {
-        var label = +m[1], rating = +m[2], size = m[3], file = m[4];
+        var label = m[1] === 'x' ? -1 : +m[1], rating = +m[2], size = m[3], file = m[4];
         return posters.poster(label, rating, size, file).then(function (buf) {
             send(res, 200, buf, 'image/jpeg', 7 * 86400);
         }).catch(function (e) {

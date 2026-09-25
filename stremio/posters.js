@@ -15,7 +15,7 @@ var MEM_MAX = 300;
 sharp.cache({ memory: 32, items: 50 });
 sharp.concurrency(2);
 
-var COLORS = { 0: '#1FA35B', 6: '#2E7CF6', 7: '#2E7CF6', 10: '#8B5CF6', 12: '#EE8A0B', 14: '#EE8A0B' };
+var COLORS = { 0: '#1FA35B', 6: '#2E7CF6', 7: '#2E7CF6', 10: '#8B5CF6', 12: '#EE8A0B', 16: '#E5484D', 18: '#B4152B' };
 
 var mem = new Map();
 var pending = new Map();
@@ -42,14 +42,15 @@ function badges(w, h, label, rating) {
 
     var age = label + '+';
     var aw = pad * 2 + age.length * fs_ * 0.66;
+    var pill = label < 0 ? '' :
+        '<rect x="' + m + '" y="' + m + '" width="' + aw.toFixed(1) + '" height="' + ph.toFixed(1) + '" rx="' + r.toFixed(1) + '"' +
+        ' fill="' + (COLORS[label] || COLORS[6]) + '" stroke="#fff" stroke-width="' + (2.5 * s).toFixed(1) + '"/>' +
+        '<text x="' + (m + aw / 2).toFixed(1) + '" y="' + ty + '" ' + font + ' fill="#fff" text-anchor="middle">' + age + '</text>';
     var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '">' +
         '<defs><linearGradient id="t" x1="0" y1="0" x2="0" y2="1">' +
         '<stop offset="0" stop-color="#000" stop-opacity=".35"/><stop offset="1" stop-color="#000" stop-opacity="0"/>' +
         '</linearGradient></defs>' +
-        '<rect width="' + w + '" height="' + (ph + m * 3).toFixed(1) + '" fill="url(#t)"/>' +
-        '<rect x="' + m + '" y="' + m + '" width="' + aw.toFixed(1) + '" height="' + ph.toFixed(1) + '" rx="' + r.toFixed(1) + '"' +
-        ' fill="' + (COLORS[label] || COLORS[6]) + '" stroke="#fff" stroke-width="' + (2.5 * s).toFixed(1) + '"/>' +
-        '<text x="' + (m + aw / 2).toFixed(1) + '" y="' + ty + '" ' + font + ' fill="#fff" text-anchor="middle">' + age + '</text>';
+        '<rect width="' + w + '" height="' + (ph + m * 3).toFixed(1) + '" fill="url(#t)"/>' + pill;
 
     if (rating >= 10) {
         var txt = (rating / 10).toFixed(1);
@@ -84,7 +85,7 @@ function render(label, rating, size, file) {
     });
 }
 
-// label — возраст (0, 6, 12…), rating — оценка ×10, size — w342/w780, file — имя файла TMDB
+// label — возраст (0, 6, 12…, −1 — без метки возраста), rating — оценка ×10, size — w342/w780, file — имя файла TMDB
 function poster(label, rating, size, file) {
     var key = [label, rating, size, file.replace(/\.\w+$/, '')].join('_');
 

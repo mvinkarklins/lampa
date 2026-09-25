@@ -31,4 +31,4 @@ https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@main/kids_age.js
 
 ## Stremio
 
-Есть и дополнение для Stremio с такими же подборками. Как его запустить, написано в [stremio/README.md](stremio/README.md).
+Для Stremio есть отдельное дополнение с фильмами и сериалами для взрослых: кассовые хиты, новинки кино, хиты и новые сериалы. Как его запустить, написано в [stremio/README.md](stremio/README.md).

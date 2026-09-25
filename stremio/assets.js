@@ -7,20 +7,20 @@ var sharp = require('sharp');
 
 var LOGO = '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">' +
     '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
-    '<stop offset="0" stop-color="#FFB347"/><stop offset="1" stop-color="#FF5E8A"/></linearGradient></defs>' +
+    '<stop offset="0" stop-color="#FF8A3D"/><stop offset="1" stop-color="#E0245E"/></linearGradient></defs>' +
     '<rect width="512" height="512" rx="116" fill="url(#g)"/>' +
-    // медвежонок
-    '<circle cx="158" cy="170" r="68" fill="#8A5634"/><circle cx="158" cy="170" r="36" fill="#F4C9A0"/>' +
-    '<circle cx="354" cy="170" r="68" fill="#8A5634"/><circle cx="354" cy="170" r="36" fill="#F4C9A0"/>' +
-    '<circle cx="256" cy="286" r="156" fill="#9C6644"/>' +
-    '<ellipse cx="256" cy="338" rx="84" ry="64" fill="#F6D8B8"/>' +
-    '<ellipse cx="256" cy="310" rx="28" ry="20" fill="#3A2317"/>' +
-    '<circle cx="198" cy="252" r="17" fill="#3A2317"/><circle cx="204" cy="246" r="5.5" fill="#fff"/>' +
-    '<circle cx="314" cy="252" r="17" fill="#3A2317"/><circle cx="320" cy="246" r="5.5" fill="#fff"/>' +
-    '<path d="M230 350 Q256 374 282 350" stroke="#3A2317" stroke-width="9" fill="none" stroke-linecap="round"/>' +
-    '<circle cx="170" cy="316" r="16" fill="#FF8FA3" opacity=".7"/><circle cx="342" cy="316" r="16" fill="#FF8FA3" opacity=".7"/>' +
-    // звёздочка
-    '<polygon points="432,52 443,80 473,82 450,101 457,130 432,114 407,130 414,101 391,82 421,80" fill="#FFF3B0"/>' +
+    // кинохлопушка: корпус
+    '<rect x="96" y="214" width="320" height="200" rx="22" fill="#1C1633"/>' +
+    '<rect x="96" y="214" width="320" height="46" fill="#2C2450"/>' +
+    '<path d="M128 214 L162 260 M200 214 L234 260 M272 214 L306 260 M344 214 L378 260" stroke="#fff" stroke-width="22" stroke-linecap="butt"/>' +
+    // верхняя планка, чуть открыта
+    '<g transform="rotate(-14 110 196)">' +
+    '<rect x="96" y="150" width="320" height="46" rx="10" fill="#2C2450"/>' +
+    '<path d="M134 150 L168 196 M206 150 L240 196 M278 150 L312 196 M350 150 L384 196" stroke="#fff" stroke-width="22"/>' +
+    '</g>' +
+    '<circle cx="110" cy="198" r="14" fill="#FFD166"/>' +
+    // звезда
+    '<polygon points="256,286 272,322 311,325 281,350 291,388 256,367 221,388 231,350 201,325 240,322" fill="#FFD166"/>' +
     '</svg>';
 
 // Детерминированный «случайный» узор, чтобы фон всегда был одинаковым
@@ -48,7 +48,7 @@ function backgroundSvg() {
 
     return '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '">' +
         '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
-        '<stop offset="0" stop-color="#1E1B4B"/><stop offset=".55" stop-color="#4C2A85"/><stop offset="1" stop-color="#B3477A"/>' +
+        '<stop offset="0" stop-color="#0F0C1D"/><stop offset=".6" stop-color="#2A1745"/><stop offset="1" stop-color="#7A1E48"/>' +
         '</linearGradient></defs>' +
         '<rect width="' + w + '" height="' + h + '" fill="url(#g)"/>' + shapes +
         // холмы

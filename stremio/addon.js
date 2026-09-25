@@ -1,6 +1,6 @@
 /*
- * Stremio addon: «Детям по возрасту».
- * Каталоги мультфильмов, фильмов и мультсериалов по возрасту ребёнка (данные TMDB).
+ * Stremio addon: «Хиты кино и сериалов».
+ * Кассовые фильмы, новинки и самые обсуждаемые сериалы (данные TMDB).
  */
 'use strict';
 
@@ -9,66 +9,47 @@ var TMDB_KEY = process.env.TMDB_API_KEY || '';
 var LANGUAGE = process.env.LANGUAGE || 'ru-RU';
 var IMG = 'https://image.tmdb.org/t/p/';
 
-// Жанры TMDB
-var G = {
-    animation: 16,
-    family: 10751,
-    horror: 27,
-    thriller: 53,
-    crime: 80,
-    war: 10752,
-    tv_kids: 10762,
-    tv_action: 10759,
-    tv_scifi: 10765,
-    tv_war: 10768,
-    tv_news: 10763,
-    tv_reality: 10764,
-    tv_soap: 10766,
-    tv_talk: 10767
+// Жанры TMDB для фильтра в Discover (у фильмов и сериалов списки разные)
+var GENRES = {
+    movie: [
+        [28, 'Боевик'], [12, 'Приключения'], [35, 'Комедия'], [18, 'Драма'], [53, 'Триллер'],
+        [27, 'Ужасы'], [878, 'Фантастика'], [14, 'Фэнтези'], [80, 'Криминал'], [9648, 'Детектив'],
+        [10749, 'Мелодрама'], [16, 'Мультфильм'], [10751, 'Семейный'], [36, 'История'],
+        [10752, 'Военный'], [99, 'Документальный'], [10402, 'Музыка'], [37, 'Вестерн']
+    ],
+    series: [
+        [18, 'Драма'], [35, 'Комедия'], [80, 'Криминал'], [9648, 'Детектив'], [10759, 'Боевик и приключения'],
+        [10765, 'Фантастика и фэнтези'], [16, 'Мультфильм'], [99, 'Документальный'], [10751, 'Семейный'],
+        [10768, 'Война и политика'], [10764, 'Реалити-шоу'], [37, 'Вестерн']
+    ]
 };
 
-var MOVIE_EXCLUDE = [G.horror, G.thriller, G.crime, G.war].join(',');
-var TV_EXCLUDE = [G.crime, G.tv_war, G.tv_news, G.tv_reality, G.tv_soap, G.tv_talk, G.horror].join(',');
+// В подборках сериалов не нужны новости и ток-шоу
+var TV_EXCLUDE = [10763, 10767].join(',');
 
-// Те же возрастные группы, что и в плагине для Лампы.
-// cert — предельный рейтинг MPAA для фильмов, tvCerts — допустимые рейтинги сериалов (США).
-var AGES = [
-    { id: '0-3',   title: '0–3 года',  emoji: '🍼', cert: 'G',     runtime: 80, tv: [G.tv_kids], tvCerts: ['TV-Y', 'TV-G'] },
-    { id: '4-6',   title: '4–6 лет',   emoji: '🧸', cert: 'G',     tv: [G.tv_kids], tvCerts: ['TV-Y', 'TV-Y7', 'TV-G'] },
-    { id: '7-9',   title: '7–9 лет',   emoji: '🚀', cert: 'PG',    tv: [G.tv_kids, G.animation], tvCerts: ['TV-Y', 'TV-Y7', 'TV-G'] },
-    { id: '10-12', title: '10–12 лет', emoji: '🧭', cert: 'PG',    tv: [G.tv_kids, G.animation, G.family], tvCerts: ['TV-Y', 'TV-Y7', 'TV-G', 'TV-PG'] },
-    { id: '13-15', title: '13–15 лет', emoji: '🎧', cert: 'PG-13', tv: [G.animation, G.family, G.tv_action, G.tv_scifi], tvCerts: ['TV-Y', 'TV-Y7', 'TV-G', 'TV-PG'] }
-];
-
-var DEFAULT_AGE = process.env.DEFAULT_AGE || '4-6';
-
-// Подборки, id каталога = kids_<set>.
-// base — что отбираем (мультфильмы, кино, мультсериалы, сериалы), mode — как сортируем:
-// new — популярное за год, latest — по дате выхода, box_office — по сборам, hits — по числу оценок.
+// Подборки, id каталога = hits_<set>.
+// mode: box_office — по сборам, new — популярное из недавно вышедшего, hits — по числу оценок.
 var SETS = [
-    { id: 'cartoons',         base: 'cartoons',       type: 'movie',  emoji: '🎨', name: 'Мультфильмы для детей' },
-    { id: 'new',              base: 'cartoons',       type: 'movie',  emoji: '✨', name: 'Новые мультфильмы', mode: 'new', shape: 'landscape' },
-    { id: 'latest',           base: 'cartoons',       type: 'movie',  emoji: '🆕', name: 'Свежие мультфильмы', mode: 'latest' },
-    { id: 'box_office',       base: 'cartoons',       type: 'movie',  emoji: '💰', name: 'Кассовые мультфильмы', mode: 'box_office' },
-    { id: 'cartoon_series',   base: 'cartoon_series', type: 'series', emoji: '📺', name: 'Мультсериалы' },
-    { id: 'films',            base: 'films',          type: 'movie',  emoji: '🎬', name: 'Детское кино' },
-    { id: 'films_box_office', base: 'films',          type: 'movie',  emoji: '💰', name: 'Кассовое детское кино', mode: 'box_office' },
-    { id: 'series',           base: 'series',         type: 'series', emoji: '🍿', name: 'Сериалы для детей' },
-    { id: 'series_hits',      base: 'series',         type: 'series', emoji: '🔥', name: 'Хиты сериалов', mode: 'hits' }
+    { id: 'box_office', type: 'movie',  emoji: '💰', name: 'Кассовые хиты', mode: 'box_office' },
+    { id: 'new_movies', type: 'movie',  emoji: '✨', name: 'Новинки кино', mode: 'new', shape: 'landscape' },
+    { id: 'hit_series', type: 'series', emoji: '🔥', name: 'Хиты сериалов', mode: 'hits' },
+    { id: 'new_series', type: 'series', emoji: '🆕', name: 'Новые сериалы', mode: 'new' }
 ];
-
-var MOVIE_CERTS = ['G', 'PG', 'PG-13'];
 
 // Метка возраста на постере по рейтингу США
-var LABELS = { 'G': 0, 'TV-Y': 0, 'TV-G': 0, 'PG': 6, 'TV-Y7': 7, 'TV-PG': 10, 'PG-13': 12 };
-
-function ageByTitle(title) {
-    for (var i = 0; i < AGES.length; i++) if (AGES[i].title === title || AGES[i].id === title) return AGES[i];
-    return null;
-}
+var LABELS = {
+    'G': 0, 'TV-Y': 0, 'TV-G': 0, 'PG': 6, 'TV-Y7': 7, 'TV-PG': 10,
+    'PG-13': 12, 'TV-14': 16, 'R': 18, 'NC-17': 18, 'TV-MA': 18
+};
 
 function setById(id) {
     for (var i = 0; i < SETS.length; i++) if (SETS[i].id === id) return SETS[i];
+    return null;
+}
+
+function genreByName(type, name) {
+    var list = GENRES[type] || [];
+    for (var i = 0; i < list.length; i++) if (list[i][1] === name) return list[i][0];
     return null;
 }
 
@@ -82,10 +63,10 @@ function daysAgo(n) {
 
 function manifest(base) {
     return {
-        id: 'community.kids.age',
-        version: '1.3.0',
-        name: 'Детям по возрасту',
-        description: 'Мультфильмы, фильмы и сериалы, подобранные по возрасту ребёнка (TMDB). Возраст выбирается в фильтре каталога.',
+        id: 'community.hits.ru',
+        version: '2.0.0',
+        name: 'Хиты кино и сериалов',
+        description: 'Кассовые фильмы, новинки кино и самые обсуждаемые сериалы (TMDB). На постерах — возраст и оценка, жанр выбирается в фильтре каталога.',
         logo: base + '/logo.png',
         background: base + '/background.jpg',
         resources: ['catalog'],
@@ -94,10 +75,10 @@ function manifest(base) {
         catalogs: SETS.map(function (set) {
             return {
                 type: set.type,
-                id: 'kids_' + set.id,
+                id: 'hits_' + set.id,
                 name: set.emoji + ' ' + set.name,
                 extra: [
-                    { name: 'genre', options: AGES.map(function (a) { return a.title; }), isRequired: false },
+                    { name: 'genre', options: GENRES[set.type].map(function (g) { return g[1]; }), isRequired: false },
                     { name: 'skip', isRequired: false }
                 ]
             };
@@ -105,62 +86,42 @@ function manifest(base) {
     };
 }
 
-// Параметры запроса discover для подборки и возраста
-function discoverParams(set, age) {
+// Параметры запроса discover для подборки и жанра
+function discoverParams(set, genre) {
     var p = { include_adult: 'false', sort_by: 'popularity.desc', 'vote_count.gte': 50 };
+    if (genre) p.with_genres = genre;
 
     if (set.type === 'movie') {
-        p.certification_country = 'US';
-        p['certification.lte'] = age.cert;
         p['primary_release_date.lte'] = today();
-        if (age.runtime) p['with_runtime.lte'] = age.runtime;
 
-        if (set.base === 'films') {
-            p.with_genres = G.family;
-            p.without_genres = MOVIE_EXCLUDE + ',' + G.animation;
-        } else {
-            p.with_genres = G.animation;
-            p.without_genres = MOVIE_EXCLUDE;
-        }
-
-        if (set.mode === 'new') {
-            p['primary_release_date.gte'] = daysAgo(365);
-            p['vote_count.gte'] = 5;
-        }
-
-        // самые последние вышедшие: по дате выхода, а не по популярности
-        if (set.mode === 'latest') {
-            p.sort_by = 'primary_release_date.desc';
-            p['vote_count.gte'] = 3;
-        }
-
-        // больше всего собрали в прокате за последние три года.
-        // Кассовых фильмов с рейтингом G мало, поэтому для малышей берём десять лет.
+        // больше всего собрали в прокате за последние три года
         if (set.mode === 'box_office') {
             p.sort_by = 'revenue.desc';
-            p['primary_release_date.gte'] = daysAgo((age.cert === 'G' ? 10 : 3) * 365);
+            p['primary_release_date.gte'] = daysAgo(3 * 365);
+        }
+
+        // популярное из вышедшего за полгода
+        if (set.mode === 'new') {
+            p['primary_release_date.gte'] = daysAgo(183);
+            p['vote_count.gte'] = 20;
         }
 
         return { path: 'discover/movie', params: p };
     }
 
-    // У сериалов TMDB фильтрует по рейтингу только списком: TV-Y|TV-G|...
-    p.certification_country = 'US';
-    p.certification = age.tvCerts.join('|');
-
-    if (set.base === 'cartoon_series') {
-        p.with_genres = age.id === '10-12' || age.id === '13-15' ? String(G.animation) : G.animation + ',' + G.tv_kids;
-        p.without_genres = TV_EXCLUDE;
-    } else {
-        p.with_genres = age.tv.join('|');
-        p.without_genres = TV_EXCLUDE + ',' + G.animation;
-    }
+    p.without_genres = TV_EXCLUDE;
 
     // сборов у сериалов нет: хиты — больше всего оценок среди тех, что выходили последние три года
-    // (для младших детских сериалов мало, им — десять лет)
     if (set.mode === 'hits') {
         p.sort_by = 'vote_count.desc';
-        p['air_date.gte'] = daysAgo((age.tvCerts.indexOf('TV-PG') >= 0 ? 3 : 10) * 365);
+        p['air_date.gte'] = daysAgo(3 * 365);
+    }
+
+    // премьеры последнего года
+    if (set.mode === 'new') {
+        p['first_air_date.gte'] = daysAgo(365);
+        p['first_air_date.lte'] = today();
+        p['vote_count.gte'] = 20;
     }
 
     return { path: 'discover/tv', params: p };
@@ -190,7 +151,7 @@ function usCert(kind, d) {
 
 /*
  * Детали карточки одним запросом: IMDb ID (Stremio и дополнения с потоками работают с ним),
- * рейтинг США, длительность и жанры.
+ * рейтинг США, длительность, сборы и жанры.
  */
 var INFO_TTL = 24 * 3600 * 1000;
 var infoCache = new Map();
@@ -218,14 +179,6 @@ function details(kind, tmdbId) {
     });
 }
 
-// Подходит ли карточка возрасту (discover иногда пропускает лишнее)
-function allowed(kind, cert, age) {
-    if (!cert) return true;
-    if (kind === 'tv') return age.tvCerts.indexOf(cert) >= 0;
-    var i = MOVIE_CERTS.indexOf(cert);
-    return i >= 0 && i <= MOVIE_CERTS.indexOf(age.cert);
-}
-
 function plural(n, one, few, many) {
     var m10 = n % 10, m100 = n % 100;
     if (m10 === 1 && m100 !== 11) return n + ' ' + one;
@@ -251,19 +204,21 @@ function votes(n) {
     return n >= 1000 ? Math.round(n / 1000) + ' тыс. оценок' : plural(n, 'оценка', 'оценки', 'оценок');
 }
 
-function toMeta(entry, set, age, base) {
+function toMeta(entry, set, base) {
     var item = entry.item, info = entry.info;
     var date = item.release_date || item.first_air_date || '';
-    var label = info.cert in LABELS ? LABELS[info.cert] : parseInt(age.id, 10);
+    // возраст неизвестен — на постере только оценка
+    var label = info.cert in LABELS ? LABELS[info.cert] : 'x';
     var rating = Math.round((item.vote_average || 0) * 10);
     var landscape = set.shape === 'landscape' && item.backdrop_path;
     var img = landscape ? 'w780' + item.backdrop_path : item.poster_path ? 'w342' + item.poster_path : null;
 
     var length = set.type === 'movie' ? runtimeText(info.runtime)
         : info.seasons ? plural(info.seasons, 'сезон', 'сезона', 'сезонов') : '';
-    var box = set.mode === 'box_office' && info.revenue ? '💰 ' + money(info.revenue)
+    var extra = set.mode === 'box_office' && info.revenue ? '💰 ' + money(info.revenue)
         : set.mode === 'hits' && item.vote_count ? '🔥 ' + votes(item.vote_count) : '';
-    var line = [label + '+', box, length, info.genres.slice(0, 3).join(', ')].filter(Boolean).join(' · ');
+    var line = [label === 'x' ? '' : label + '+', extra, length, info.genres.slice(0, 3).join(', ')]
+        .filter(Boolean).join(' · ');
 
     return {
         id: info.imdb,
@@ -280,7 +235,7 @@ function toMeta(entry, set, age, base) {
     };
 }
 
-// Разбор extra из URL Stremio: "genre=4–6 лет&skip=20"
+// Разбор extra из URL Stremio: "genre=Комедия&skip=20"
 function parseExtra(str) {
     var extra = {};
     if (!str) return extra;
@@ -302,11 +257,11 @@ var lists = new Map();
 
 /*
  * Stremio присылает skip = число уже полученных карточек. Карточки без IMDb ID
- * и с неподходящим рейтингом отбрасываются, поэтому страницы TMDB и skip не совпадают:
- * копим отфильтрованный список и отдаём из него срез [skip, skip + PAGE_SIZE).
+ * отбрасываются, поэтому страницы TMDB и skip не совпадают: копим отфильтрованный
+ * список и отдаём из него срез [skip, skip + PAGE_SIZE).
  */
-function collected(set, age, need) {
-    var key = set.id + ':' + age.id;
+function collected(set, genre, need) {
+    var key = set.id + ':' + (genre || '');
     var list = lists.get(key);
 
     if (!list || Date.now() - list.time > LIST_TTL) {
@@ -319,7 +274,7 @@ function collected(set, age, need) {
     function more() {
         if (list.entries.length >= need || list.page >= list.total) return Promise.resolve(list.entries);
 
-        var d = discoverParams(set, age);
+        var d = discoverParams(set, genre);
         d.params.page = list.page + 1;
 
         return tmdb(d.path, d.params).then(function (data) {
@@ -328,7 +283,7 @@ function collected(set, age, need) {
 
             return Promise.all((data.results || []).map(function (item) {
                 return details(kind, item.id).then(function (info) {
-                    if (!info || !info.imdb || !allowed(kind, info.cert, age)) return null;
+                    if (!info || !info.imdb) return null;
                     // в кассовые — только то, что шло в кино (от миллиона долларов сборов)
                     if (set.mode === 'box_office' && info.revenue < 1e6) return null;
                     return { item: item, info: info };
@@ -351,16 +306,17 @@ function collected(set, age, need) {
 }
 
 function catalog(type, id, extra, base) {
-    var set = setById(id.replace(/^kids_/, ''));
-    var age = ageByTitle(extra.genre) || ageByTitle(DEFAULT_AGE) || AGES[1];
-
+    var set = setById(id.replace(/^hits_/, ''));
     if (!set || set.type !== type) return Promise.resolve(null);
+
+    var genre = extra.genre ? genreByName(type, extra.genre) : null;
+    if (extra.genre && !genre) return Promise.resolve({ metas: [] });
 
     var skip = parseInt(extra.skip, 10) || 0;
 
-    return collected(set, age, skip + PAGE_SIZE).then(function (entries) {
+    return collected(set, genre, skip + PAGE_SIZE).then(function (entries) {
         return {
-            metas: entries.slice(skip, skip + PAGE_SIZE).map(function (e) { return toMeta(e, set, age, base); }),
+            metas: entries.slice(skip, skip + PAGE_SIZE).map(function (e) { return toMeta(e, set, base); }),
             cacheMaxAge: 6 * 3600
         };
     });
@@ -371,6 +327,5 @@ module.exports = {
     catalog: catalog,
     parseExtra: parseExtra,
     discoverParams: discoverParams,
-    AGES: AGES,
     SETS: SETS
 };
