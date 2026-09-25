@@ -35,6 +35,9 @@
     };
 
     var MOVIE_EXCLUDE = [G.horror, G.thriller, G.crime, G.war].join(',');
+
+    // Студии (компании TMDB)
+    var STUDIO_GHIBLI = 10342;
     var TV_EXCLUDE = [G.crime, G.tv_war, G.tv_news, G.tv_reality, G.tv_soap, G.tv_talk, G.horror].join(',');
 
     /*
@@ -42,17 +45,17 @@
      * cert    — максимальный рейтинг MPAA (США) для фильмов.
      * tvCerts — допустимые рейтинги сериалов (США); TMDB фильтрует их только списком.
      * tv      — жанры для сериалов.
-     * runtime — ограничение длительности фильма (для самых маленьких).
      */
     var AGES = [
-        { id: '0-3',   title: '0–3 года',   cert: 'G',     runtime: 80, tv: [G.tv_kids], tvCerts: ['TV-Y', 'TV-G'], live_action: false },
-        { id: '4-6',   title: '4–6 лет',    cert: 'G',     tv: [G.tv_kids], tvCerts: ['TV-Y', 'TV-Y7', 'TV-G'], live_action: true },
+        { id: '0-6',   title: 'до 6 лет',   cert: 'G',     tv: [G.tv_kids], tvCerts: ['TV-Y', 'TV-Y7', 'TV-G'], live_action: true },
         { id: '7-9',   title: '7–9 лет',    cert: 'PG',    tv: [G.tv_kids, G.animation], tvCerts: ['TV-Y', 'TV-Y7', 'TV-G'], live_action: true },
         { id: '10-12', title: '10–12 лет',  cert: 'PG',    tv: [G.tv_kids, G.animation, G.family], tvCerts: ['TV-Y', 'TV-Y7', 'TV-G', 'TV-PG'], live_action: true },
         { id: '13-15', title: '13–15 лет',  cert: 'PG-13', tv: [G.animation, G.family, G.tv_action, G.tv_scifi], tvCerts: ['TV-Y', 'TV-Y7', 'TV-G', 'TV-PG'], live_action: true }
     ];
 
     function ageById(id) {
+        // раньше были группы 0–3 и 4–6, теперь это одна группа «до 6 лет»
+        if (id === '0-3' || id === '4-6') id = '0-6';
         for (var i = 0; i < AGES.length; i++) if (AGES[i].id === id) return AGES[i];
         return null;
     }
@@ -114,13 +117,13 @@
 
         if (kind === 'cartoons') {
             p.with_genres = G.animation;
+        } else if (kind === 'ghibli') {
+            p.with_companies = STUDIO_GHIBLI;
         } else {
             // живые фильмы: семейные, но не анимация
             p.with_genres = G.family;
             p.without_genres = MOVIE_EXCLUDE + ',' + G.animation;
         }
-
-        if (age.runtime) p['with_runtime.lte'] = age.runtime;
 
         var s = SORTS[sort];
         for (var k in s) p[k] = s[k];
@@ -182,6 +185,7 @@
             { title: 'Мультфильмы — новинки',      url: movieUrl(age, 'cartoons', 'fresh') },
             { title: 'Мультфильмы — самые свежие', url: movieUrl(age, 'cartoons', 'latest') },
             { title: 'Мультфильмы — кассовые',     url: movieUrl(age, 'cartoons', 'box_office') },
+            { title: 'Студия Гибли',               url: movieUrl(age, 'ghibli', 'popular') },
             { title: 'Мультсериалы — популярные',  url: tvUrl(age, 'cartoon_series', 'popular') },
             { title: 'Мультсериалы — лучшие',      url: tvUrl(age, 'cartoon_series', 'top') },
             { title: 'Мультсериалы — хиты',        url: tvUrl(age, 'cartoon_series', 'hits') }
@@ -228,11 +232,13 @@
     function showAges() {
         var last = Lampa.Storage.get(STORAGE_KEY, '');
 
+        var lastAge = ageById(last);
+
         var items = AGES.map(function (age) {
             return {
                 title: age.title,
                 subtitle: 'рейтинг до ' + age.cert,
-                selected: age.id === last,
+                selected: lastAge === age,
                 age: age
             };
         });
