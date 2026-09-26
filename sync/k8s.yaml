@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lampa-sync
+  namespace: media
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: lampa-sync
+  template:
+    metadata:
+      labels:
+        app: lampa-sync
+    spec:
+      containers:
+        - name: sync
+          image: docker.io/library/lampa-sync:1.0.0
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            periodSeconds: 60
+          resources:
+            requests:
+              cpu: 5m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+      volumes:
+        - name: data
+          hostPath:
+            path: /var/snap/microk8s/common/default-storage/lampa-sync
+            type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lampa-sync
+  namespace: media
+spec:
+  type: LoadBalancer
+  loadBalancerIP: 192.168.1.25
+  selector:
+    app: lampa-sync
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080

@@ -1,0 +1,7 @@
+FROM node:20-alpine
+WORKDIR /app
+COPY server.js ./
+ENV NODE_ENV=production PORT=8080 DATA_DIR=/data
+EXPOSE 8080
+HEALTHCHECK --interval=60s --timeout=5s CMD wget -qO /dev/null http://127.0.0.1:8080/health || exit 1
+CMD ["node", "server.js"]
