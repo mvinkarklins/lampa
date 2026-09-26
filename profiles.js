@@ -7,7 +7,7 @@
     if (window.nas_profiles_plugin) return;
     window.nas_profiles_plugin = true;
 
-    var VERSION = '1.0.0';
+    var VERSION = '1.1.0';
     var DEFAULT_URL = 'http://192.168.1.25';
     var SYNC_EVERY = 5 * 60 * 1000;
     var PUSH_DELAY = 5000;
@@ -308,6 +308,23 @@
         items.push({ title: '+ Добавить профиль', action: addProfile });
         if (profiles.length > 1) items.push({ title: 'Удалить профиль', action: deleteProfile });
         items.push({ title: 'Синхронизировать сейчас', action: syncNow });
+
+        if (currentId()) {
+            items.push({
+                title: 'Загрузить с сервера',
+                subtitle: 'заменить данные на этом устройстве',
+                action: function () {
+                    confirm('Заменить данные на этом устройстве серверными?', forcePull);
+                }
+            });
+            items.push({
+                title: 'Отправить на сервер',
+                subtitle: 'заменить данные на сервере',
+                action: function () {
+                    confirm('Заменить данные профиля на сервере данными этого устройства?', forcePush);
+                }
+            });
+        }
         items.push({ title: 'Сервер', subtitle: serverUrl(), action: editServer });
 
         Lampa.Select.show({
@@ -327,6 +344,75 @@
         syncAll(function (err, pulled) {
             if (err) Lampa.Noty.show('Ошибка синхронизации: ' + err.message);
             else Lampa.Noty.show('Синхронизировано' + (pulled.length ? ', обновлено: ' + pulled.length : ''));
+        });
+    }
+
+    function confirm(title, action) {
+        Lampa.Select.show({
+            title: title,
+            items: [{ title: 'Да', yes: true }, { title: 'Нет' }],
+            onSelect: function (item) {
+                if (item.yes) action();
+                else showMenu();
+            },
+            onBack: showMenu
+        });
+    }
+
+    // данные профиля и общие настройки на устройстве заменяются серверными
+    function forcePull() {
+        if (busy) return Lampa.Noty.show('Идёт синхронизация, попробуйте через пару секунд');
+        busy = true;
+        Lampa.Noty.show('Загружаю с сервера…');
+
+        syncScope('shared', true, function (err) {
+            if (err) {
+                busy = false;
+                return Lampa.Noty.show('Ошибка: ' + err.message);
+            }
+            removeProfileData();
+            syncScope(currentId(), true, function (err2) {
+                busy = false;
+                if (err2) return Lampa.Noty.show('Ошибка: ' + err2.message);
+                setTimeout(function () { window.location.reload(); }, 300);
+            });
+        });
+    }
+
+    function snapshot(scope) {
+        var data = {};
+        var state = loadState();
+        var st = state[scope] = {};
+        var now = Date.now();
+
+        localKeys(scope).forEach(function (key) {
+            var raw = ls(key);
+            if (raw === null) return;
+            data[key] = { v: raw, t: now };
+            st[key] = { t: now, h: hash(raw) };
+        });
+
+        saveState(state);
+        return data;
+    }
+
+    // данные устройства заменяют серверные: профиль на сервере очищается и пишется заново
+    function forcePush() {
+        if (busy) return Lampa.Noty.show('Идёт синхронизация, попробуйте через пару секунд');
+        busy = true;
+        Lampa.Noty.show('Отправляю на сервер…');
+
+        var done = function (err) {
+            busy = false;
+            Lampa.Noty.show(err ? 'Ошибка: ' + err.message : 'Данные устройства отправлены на сервер');
+        };
+
+        request('POST', '/api/store/shared', snapshot('shared'), function (err) {
+            if (err) return done(err);
+            request('DELETE', '/api/store/' + currentId(), undefined, function (err2) {
+                if (err2) return done(err2);
+                request('POST', '/api/store/' + currentId(), snapshot(currentId()), done);
+            });
         });
     }
 
