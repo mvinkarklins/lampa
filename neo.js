@@ -12,7 +12,7 @@
     if (window.neo_plugin) return;
     window.neo_plugin = true;
 
-    var VERSION = '1.3.0';
+    var VERSION = '1.4.0';
     var SETTING = 'neo_enabled';
     var THEME = 'neo_theme';
     var HERO = 'neo_hero';
@@ -20,6 +20,7 @@
     var CARDS = 'neo_cards';
     var CARD_SIZES = { small: 'Меньше', tiny: 'Мелкие', normal: 'Обычные' };
     var HERO_COMPONENTS = ['main', 'category'];
+    var SHARP_DELAY = 1000;
 
     var logos = {};
     var focusTimer = null;
@@ -280,12 +281,23 @@
         hero.querySelector('.neo-hero__descr').textContent = data.overview || '';
 
         bg.classList.remove('show');
+        clearTimeout(hero.neoSharp);
         if (data.backdrop_path) {
             var img = new Image();
             img.onload = function () {
                 if (hero.neoId !== data.id) return;
                 bg.style.backgroundImage = 'url(' + img.src + ')';
                 bg.classList.add('show');
+
+                // у TMDB нет размера 1920: если фокус задержался, подменяем на оригинал
+                // (обычно 1920×1080), чтобы перебор постеров не тормозил из-за тяжёлых картинок
+                hero.neoSharp = setTimeout(function () {
+                    var full = new Image();
+                    full.onload = function () {
+                        if (hero.neoId === data.id) bg.style.backgroundImage = 'url(' + full.src + ')';
+                    };
+                    full.src = Lampa.Api.img(data.backdrop_path, 'original');
+                }, SHARP_DELAY);
             };
             img.src = Lampa.Api.img(data.backdrop_path, 'w1280');
         }
