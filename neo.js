@@ -12,11 +12,13 @@
     if (window.neo_plugin) return;
     window.neo_plugin = true;
 
-    var VERSION = '1.2.0';
+    var VERSION = '1.3.0';
     var SETTING = 'neo_enabled';
     var THEME = 'neo_theme';
     var HERO = 'neo_hero';
     var HERO_SIZES = { compact: 'Компактный', big: 'Большой', off: 'Выключен' };
+    var CARDS = 'neo_cards';
+    var CARD_SIZES = { small: 'Меньше', tiny: 'Мелкие', normal: 'Обычные' };
     var HERO_COMPONENTS = ['main', 'category'];
 
     var logos = {};
@@ -84,6 +86,11 @@
         'body.neo-t-apple.neo-hero-compact .neo-hero__info{width:auto;padding:0 15%}',
         'body.neo.neo-hero-off .neo-hero{display:none}',
         'body.neo.neo-hero-off .neo-host .activity__body{padding-top:0}',
+
+        // ---- размер постеров в рядах (штатно 12.75em) ----
+        'body.neo.neo-cards-small .items-line .card{width:10.2em}',
+        'body.neo.neo-cards-tiny .items-line .card{width:8.6em}',
+        'body.neo.neo-cards-tiny .items-line .card__title{font-size:.95em}',
 
         // ---- фон и шапка ----
         'body.neo{background:var(--neo-bg)}',
@@ -374,6 +381,10 @@
         cls.toggle('neo', on);
         Object.keys(THEMES).forEach(function (t) { cls.toggle('neo-t-' + t, on && t === theme()); });
         Object.keys(HERO_SIZES).forEach(function (h) { cls.toggle('neo-hero-' + h, on && h === hero); });
+
+        var cards = Lampa.Storage.get(CARDS, 'small') + '';
+        if (!CARD_SIZES[cards]) cards = 'small';
+        Object.keys(CARD_SIZES).forEach(function (c) { cls.toggle('neo-cards-' + c, on && c === cards); });
     }
 
     function addSetting() {
@@ -411,6 +422,16 @@
             },
             onChange: apply
         });
+
+        Lampa.SettingsApi.addParam({
+            component: 'interface',
+            param: { name: CARDS, type: 'select', values: CARD_SIZES, default: 'small' },
+            field: {
+                name: 'Постеры Neo',
+                description: 'Размер постеров в рядах: меньше, мелкие или обычные.'
+            },
+            onChange: apply
+        });
     }
 
     function init() {
@@ -426,7 +447,7 @@
         if (Lampa.Activity && Lampa.Activity.active) attach(Lampa.Activity.active());
 
         Lampa.Storage.listener.follow('change', function (e) {
-            if (e.name === SETTING || e.name === THEME || e.name === HERO) apply();
+            if ([SETTING, THEME, HERO, CARDS].indexOf(e.name) >= 0) apply();
         });
     }
 
