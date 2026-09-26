@@ -7,14 +7,16 @@
     if (window.nas_profiles_plugin) return;
     window.nas_profiles_plugin = true;
 
-    var VERSION = '1.2.1';
+    var VERSION = '1.3.0';
     var DEFAULT_URL = 'http://192.168.1.25';
     var SYNC_EVERY = 5 * 60 * 1000;
     var PUSH_DELAY = 5000;
 
     // данные профиля: точные ключи и префиксы (file_view_<id> у аккаунта CUB)
     var PROFILE_KEYS = ['favorite', 'online_view', 'torrents_view', 'search_history',
-        'online_last_balanser', 'user_clarifys', 'torrents_filter_data', 'kids_age_last'];
+        'online_last_balanser', 'user_clarifys', 'torrents_filter_data', 'kids_age_last',
+        // выбор парсера для кнопки «Торренты» (torrent_button.js)
+        'tbutton_source', 'tbutton_last'];
     var PROFILE_PREFIXES = ['file_view'];
 
     // общие настройки для всех профилей
