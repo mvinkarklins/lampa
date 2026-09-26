@@ -97,6 +97,15 @@ function scopeName(id) {
 
 var server = http.createServer(function (req, res) {
     var url = req.url.split('?')[0];
+
+    // лог запросов: кто (IP, устройство) и в какой профиль ходит
+    if (req.method !== 'OPTIONS' && url !== '/health') {
+        var ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').replace('::ffff:', '');
+        var ua = String(req.headers['user-agent'] || '').replace(/^Mozilla\/5\.0 /, '').slice(0, 60);
+        res.on('finish', function () {
+            console.log(new Date().toISOString().slice(11, 19) + ' ' + ip + ' ' + req.method + ' ' + url + ' ' + res.statusCode + ' ' + (req.bodyKeys || '') + ' | ' + ua);
+        });
+    }
     var parts = url.split('/').filter(Boolean);
 
     if (req.method === 'OPTIONS') return send(res, 204);
@@ -132,6 +141,7 @@ var server = http.createServer(function (req, res) {
         if (req.method === 'POST') {
             return readBody(req, function (err, body) {
                 if (err) return send(res, 400, { error: 'bad body' });
+                req.bodyKeys = Object.keys(body).join(',');
                 send(res, 200, merge(scope, body));
             });
         }

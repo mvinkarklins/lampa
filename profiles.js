@@ -7,7 +7,7 @@
     if (window.nas_profiles_plugin) return;
     window.nas_profiles_plugin = true;
 
-    var VERSION = '1.1.0';
+    var VERSION = '1.2.0';
     var DEFAULT_URL = 'http://192.168.1.25';
     var SYNC_EVERY = 5 * 60 * 1000;
     var PUSH_DELAY = 5000;
@@ -22,7 +22,9 @@
         'torrserver_auth', 'torrserver_login', 'torrserver_password',
         'parser_use', 'parser_torrent_type', 'parser_use_link', 'parse_lang',
         'prowlarr_url', 'prowlarr_key', 'prowlarr_url_two', 'prowlarr_key_two',
-        'jackett_url', 'jackett_key', 'jackett_url_two', 'jackett_key_two'];
+        'jackett_url', 'jackett_key', 'jackett_url_two', 'jackett_key_two',
+        // список установленных плагинов; после его смены Лампу нужно перезапустить
+        'plugins'];
 
     // служебные ключи плагина пишем в localStorage напрямую, мимо Lampa.Storage
     var META_URL = 'nsync_url';
@@ -191,6 +193,10 @@
             syncScope(currentId(), false, function (err2, pulled) {
                 busy = false;
                 if (pulled && pulled.indexOf('favorite') >= 0 && Lampa.Favorite) Lampa.Favorite.read();
+                if (pulledShared && pulledShared.indexOf('plugins') >= 0) {
+                    Lampa.Noty.show('Список плагинов обновлён, перезапускаю Лампу…');
+                    setTimeout(function () { window.location.reload(); }, 1500);
+                }
                 done(err2, (pulledShared || []).concat(pulled || []));
             });
         });

@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: sync
-          image: docker.io/library/lampa-sync:1.0.0
+          image: docker.io/library/lampa-sync:1.0.1
           imagePullPolicy: Never
           ports:
             - containerPort: 8080
@@ -53,6 +53,7 @@ metadata:
 spec:
   type: LoadBalancer
   loadBalancerIP: 192.168.1.25
+  externalTrafficPolicy: Local
   selector:
     app: lampa-sync
   ports:

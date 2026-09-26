@@ -58,7 +58,7 @@ https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/kids_age.js
 
 ## Профили с синхронизацией
 
-Плагин `profiles.js` добавляет в левое меню пункт с именем текущего профиля. У каждого профиля свои закладки, история, таймкоды и возраст в «Детям»; настройки TorrServer и парсера общие для всех профилей и устройств.
+Плагин `profiles.js` добавляет в левое меню пункт с именем текущего профиля. У каждого профиля свои закладки, история, таймкоды и возраст в «Детям»; настройки TorrServer и парсера, а также список установленных плагинов общие для всех профилей и устройств (после смены списка плагинов Лампа перезапускается сама).
 
 ```
 https://mvinkarklins.github.io/lampa/profiles.js
@@ -70,8 +70,8 @@ https://mvinkarklins.github.io/lampa/profiles.js
 
 ```
 cd sync
-docker build -t lampa-sync:1.0.0 .
-docker save lampa-sync:1.0.0 | microk8s ctr image import -
+docker build -t lampa-sync:1.0.1 .
+docker save lampa-sync:1.0.1 | microk8s ctr image import -
 microk8s kubectl apply -f k8s.yaml
 ```
 
