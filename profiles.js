@@ -7,7 +7,7 @@
     if (window.nas_profiles_plugin) return;
     window.nas_profiles_plugin = true;
 
-    var VERSION = '1.2.0';
+    var VERSION = '1.2.1';
     var DEFAULT_URL = 'http://192.168.1.25';
     var SYNC_EVERY = 5 * 60 * 1000;
     var PUSH_DELAY = 5000;
@@ -77,6 +77,26 @@
         var h = 5381;
         for (var i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
         return str.length + ':' + h;
+    }
+
+    // список плагинов с сервера плюс те, что есть только на этом устройстве
+    function mergePlugins(localRaw, remoteRaw) {
+        try {
+            var remote = JSON.parse(remoteRaw);
+            var urls = remote.map(function (p) { return typeof p === 'string' ? p : p.url; });
+
+            JSON.parse(localRaw).forEach(function (p) {
+                var url = typeof p === 'string' ? p : p.url;
+                if (urls.indexOf(url) < 0) {
+                    remote.push(p);
+                    urls.push(url);
+                }
+            });
+
+            return JSON.stringify(remote);
+        } catch (e) {
+            return remoteRaw;
+        }
     }
 
     function isProfileKey(key) {
@@ -159,6 +179,18 @@
                 if (scope === 'shared' ? !isSharedKey(key) : !isProfileKey(key)) return;
                 var r = remote[key];
                 var known = st[key];
+
+                // первая синхронизация плагинов на устройстве: объединяем списки, чтобы не потерять свои
+                if (key === 'plugins' && !force && (!known || known.t === 0) && ls(key)) {
+                    var merged = mergePlugins(ls(key), r.v);
+                    if (merged !== r.v) {
+                        apply(key, merged);
+                        pulled.push(key);
+                        st[key] = { t: now, h: hash(ls(key) || merged) };
+                        push[key] = { v: ls(key) || merged, t: now };
+                        return;
+                    }
+                }
 
                 if (force || !known || r.t > known.t) {
                     if (ls(key) !== r.v) {
