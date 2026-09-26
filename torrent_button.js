@@ -3,7 +3,7 @@
 // но на пультах LG долгое нажатие не срабатывает.
 //
 // По нажатию можно выбрать, где искать: свой парсер из настроек (Prowlarr)
-// или публичный JacRed, если свой не отвечает. Выбор задаётся и в
+// публичный JacRed, если свой не отвечает, или оба сразу. Выбор задаётся и в
 // Настройки → Парсер → «Кнопка «Торренты» на карточке».
 (function () {
     'use strict';
@@ -17,12 +17,15 @@
     // публичные JacRed, проверенные 26.09.2026
     var PUBLIC = ['jac.red', 'jac-red.ru', 'jr.maxvol.pro'];
 
+    var BOTH = 'both';
     var SOURCES = { ask: 'Спрашивать каждый раз', own: 'Мой парсер из настроек' };
+    SOURCES[BOTH] = 'Везде: мой парсер + ' + PUBLIC[0];
     PUBLIC.forEach(function (host) { SOURCES[host] = host; });
 
-    // Настройки для одного поиска через публичный парсер. Подменяем только ответ
-    // Storage.field на время запроса, в localStorage ничего не пишем, чтобы
-    // временные значения не разошлись по устройствам через синхронизацию профилей.
+    // Поиск через публичный парсер: подменяем ответ Storage.field только на время
+    // синхронного запуска поиска (Лампа читает настройки парсера в этот момент).
+    // В localStorage ничего не пишем, чтобы временные значения не разошлись
+    // по устройствам через синхронизацию профилей.
     var pending = null;
     var active = null;
 
@@ -36,6 +39,11 @@
         };
     }
 
+    // одна раздача из разных парсеров: одинаковое название и размер
+    function resultKey(item) {
+        return String(item.Title || '').toLowerCase().replace(/\s+/g, ' ').trim() + '|' + (item.Size || '');
+    }
+
     function patch() {
         var field = Lampa.Storage.field;
         var get = Lampa.Parser.get;
@@ -45,39 +53,66 @@
             return field.apply(this, arguments);
         };
 
+        function run(self, settings, params, ok, fail) {
+            active = settings;
+            try {
+                get.call(self, params, ok, fail);
+            } finally {
+                active = null;
+            }
+        }
+
         Lampa.Parser.get = function (params, oncomplite, onerror) {
             // подмена действует только на поиск, запущенный нашей кнопкой в ближайшие секунды
-            if (!pending || Date.now() - pending.time > 10000) {
-                pending = null;
-                return get.apply(this, arguments);
-            }
-
-            active = pending.settings;
+            var job = pending && Date.now() - pending.time < 10000 ? pending : null;
             pending = null;
 
-            var done = false;
-            var finish = function () {
-                if (done) return;
-                done = true;
-                active = null;
-                clearTimeout(timer);
-            };
-            var timer = setTimeout(finish, 90000);
+            if (!job) return get.apply(this, arguments);
+            if (!job.both) return run(this, job.settings, params, oncomplite, onerror);
 
-            return get.call(this, params, function (data) {
-                finish();
-                oncomplite(data);
-            }, function (err) {
-                finish();
-                onerror(err);
-            });
+            // оба парсера параллельно: сначала свои результаты, затем публичные без повторов
+            var results = [null, null];
+            var errors = [];
+            var left = 2;
+
+            var collect = function (index) {
+                return function (data) {
+                    results[index] = (data && data.Results) || [];
+                    if (--left === 0) finish();
+                };
+            };
+            var failed = function (err) {
+                errors.push(err);
+                if (--left === 0) finish();
+            };
+            var finish = function () {
+                if (!results[0] && !results[1]) return onerror(errors[0] || '');
+
+                var seen = {};
+                var merged = [];
+
+                (results[0] || []).concat(results[1] || []).forEach(function (item) {
+                    var key = resultKey(item);
+                    if (seen[key]) return;
+                    seen[key] = true;
+                    merged.push(item);
+                });
+
+                oncomplite({ Results: merged });
+            };
+
+            run(this, null, params, collect(0), failed);
+            run(this, job.settings, params, collect(1), failed);
         };
     }
 
     function search(source, choice) {
         try { localStorage.setItem(LAST, choice); } catch (e) {}
 
-        pending = choice === 'own' ? null : { settings: publicSettings(choice), time: Date.now() };
+        if (choice === 'own') pending = null;
+        else if (choice === BOTH) pending = { both: true, settings: publicSettings(PUBLIC[0]), time: Date.now() };
+        else pending = { settings: publicSettings(choice), time: Date.now() };
+
         source.trigger('hover:enter');
     }
 
@@ -85,7 +120,10 @@
         var last = 'own';
         try { last = localStorage.getItem(LAST) || 'own'; } catch (e) {}
 
-        var items = [{ title: 'Мой парсер', subtitle: 'из настроек (Prowlarr)', choice: 'own', selected: last === 'own' }];
+        var items = [
+            { title: 'Мой парсер', subtitle: 'из настроек (Prowlarr)', choice: 'own', selected: last === 'own' },
+            { title: 'Везде', subtitle: 'мой парсер + ' + PUBLIC[0] + ', без повторов', choice: BOTH, selected: last === BOTH }
+        ];
         PUBLIC.forEach(function (host) {
             items.push({ title: host, subtitle: 'публичный JacRed', choice: host, selected: last === host });
         });
@@ -110,7 +148,7 @@
             param: { name: SETTING, type: 'select', values: SOURCES, default: 'ask' },
             field: {
                 name: 'Кнопка «Торренты» на карточке',
-                description: 'Где искать по кнопке: спрашивать, свой парсер или публичный JacRed'
+                description: 'Где искать по кнопке: спрашивать, свой парсер, публичный JacRed или везде сразу'
             }
         });
     }
