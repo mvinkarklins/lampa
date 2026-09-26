@@ -7,7 +7,7 @@
     if (window.nas_profiles_plugin) return;
     window.nas_profiles_plugin = true;
 
-    var VERSION = '1.5.0';
+    var VERSION = '1.6.0';
     var DEFAULT_URL = 'http://192.168.1.25';
     var SYNC_EVERY = 5 * 60 * 1000;
     var PUSH_DELAY = 5000;
@@ -18,7 +18,7 @@
         // выбор парсера для кнопки «Торренты» (torrent_button.js)
         'tbutton_source', 'tbutton_last',
         // интерфейс Neo (neo.js)
-        'neo_enabled', 'neo_theme'];
+        'neo_enabled', 'neo_theme', 'neo_hero'];
     var PROFILE_PREFIXES = ['file_view'];
 
     // общие настройки для всех профилей

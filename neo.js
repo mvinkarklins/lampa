@@ -12,9 +12,11 @@
     if (window.neo_plugin) return;
     window.neo_plugin = true;
 
-    var VERSION = '1.1.0';
+    var VERSION = '1.2.0';
     var SETTING = 'neo_enabled';
     var THEME = 'neo_theme';
+    var HERO = 'neo_hero';
+    var HERO_SIZES = { compact: 'Компактный', big: 'Большой', off: 'Выключен' };
     var HERO_COMPONENTS = ['main', 'category'];
 
     var logos = {};
@@ -72,6 +74,16 @@
             '--neo-hero-h:58vh;--neo-hero-pad:49vh;--neo-hero-shade:linear-gradient(90deg,rgba(0,0,0,.92) 0%,rgba(0,0,0,.55) 45%,rgba(0,0,0,.15) 100%);--neo-hero-title:3.4em;' +
             '--neo-weight:800;--neo-line-title:1.35em;' +
             '--neo-btn:transparent;--neo-btn-focus:var(--neo-accent);--neo-btn-focus-text:#050505;--neo-play:transparent;--neo-play-text:var(--neo-accent)}',
+
+        // ---- размер баннера (после тем, чтобы перекрывать их) ----
+        'body.neo.neo-hero-compact{--neo-hero-h:33vh;--neo-hero-pad:26vh;--neo-hero-title:2.1em}',
+        'body.neo.neo-hero-compact .neo-hero__info{bottom:3.2em;width:58%}',
+        'body.neo.neo-hero-compact .neo-hero__logo{max-height:3.8em;margin-bottom:.4em}',
+        'body.neo.neo-hero-compact .neo-hero__meta{font-size:1.05em;margin-bottom:.4em}',
+        'body.neo.neo-hero-compact .neo-hero__descr{-webkit-line-clamp:2;font-size:1.02em}',
+        'body.neo-t-apple.neo-hero-compact .neo-hero__info{width:auto;padding:0 15%}',
+        'body.neo.neo-hero-off .neo-hero{display:none}',
+        'body.neo.neo-hero-off .neo-host .activity__body{padding-top:0}',
 
         // ---- фон и шапка ----
         'body.neo{background:var(--neo-bg)}',
@@ -178,6 +190,15 @@
         return ((data.release_date || data.first_air_date || '') + '').slice(0, 4);
     }
 
+    function genreNames(data) {
+        try {
+            var names = Lampa.Api.sources.tmdb.getGenresNameFromIds(mediaType(data), data.genre_ids || []);
+            return names.slice(0, 3).join(' · ');
+        } catch (e) {
+            return '';
+        }
+    }
+
     // логотип фильма с TMDB (русский, иначе английский, иначе любой); кэшируем
     function loadLogo(data, done) {
         if (!data.id || data.source && data.source !== 'tmdb') return done('');
@@ -243,6 +264,8 @@
         if (vote) meta.push('<span class="neo-hero__rate" style="background:' + rateColor(vote) + '">' + vote.toFixed(1) + '</span>');
         if (year(data)) meta.push('<span>' + year(data) + '</span>');
         meta.push('<span>' + (mediaType(data) === 'tv' ? 'Сериал' : 'Фильм') + '</span>');
+        var genres = genreNames(data);
+        if (genres) meta.push('<span>' + genres + '</span>');
         if ((data.original_title || data.original_name) && (data.original_title || data.original_name) !== title) {
             meta.push('<span style="color:var(--neo-dim)">' + Lampa.Utils.shortText(data.original_title || data.original_name, 40) + '</span>');
         }
@@ -345,8 +368,12 @@
         var on = enabled();
         var cls = document.body.classList;
 
+        var hero = Lampa.Storage.get(HERO, 'compact') + '';
+        if (!HERO_SIZES[hero]) hero = 'compact';
+
         cls.toggle('neo', on);
         Object.keys(THEMES).forEach(function (t) { cls.toggle('neo-t-' + t, on && t === theme()); });
+        Object.keys(HERO_SIZES).forEach(function (h) { cls.toggle('neo-hero-' + h, on && h === hero); });
     }
 
     function addSetting() {
@@ -374,6 +401,16 @@
             },
             onChange: apply
         });
+
+        Lampa.SettingsApi.addParam({
+            component: 'interface',
+            param: { name: HERO, type: 'select', values: HERO_SIZES, default: 'compact' },
+            field: {
+                name: 'Баннер Neo',
+                description: 'Блок с описанием фильма над рядами: компактный, большой или выключен.'
+            },
+            onChange: apply
+        });
     }
 
     function init() {
@@ -389,7 +426,7 @@
         if (Lampa.Activity && Lampa.Activity.active) attach(Lampa.Activity.active());
 
         Lampa.Storage.listener.follow('change', function (e) {
-            if (e.name === SETTING || e.name === THEME) apply();
+            if (e.name === SETTING || e.name === THEME || e.name === HERO) apply();
         });
     }
 
