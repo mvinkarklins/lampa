@@ -145,7 +145,7 @@
 
         Lampa.SettingsApi.addParam({
             component: 'parser',
-            param: { name: SETTING, type: 'select', values: SOURCES, default: 'ask' },
+            param: { name: SETTING, type: 'select', values: SOURCES, default: BOTH },
             field: {
                 name: 'Кнопка «Торренты» на карточке',
                 description: 'Где искать по кнопке: спрашивать, свой парсер, публичный JacRed или везде сразу'
@@ -172,7 +172,7 @@
             .addClass('selector button--torrent-direct');
 
         button.on('hover:enter', function () {
-            var mode = Lampa.Storage.get(SETTING, 'ask') + '';
+            var mode = Lampa.Storage.get(SETTING, BOTH) + '';
 
             if (mode === 'ask') choose(source);
             else search(source, SOURCES[mode] ? mode : 'own');
