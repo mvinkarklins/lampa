@@ -1,5 +1,0 @@
-node_modules
-npm-debug.log
-*.md
-k8s.yaml
-docker-compose.yml
