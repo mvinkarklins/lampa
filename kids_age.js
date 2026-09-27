@@ -1,6 +1,6 @@
 /*
  * Lampa plugin: «Детям по возрасту»
- * Подбор фильмов, мультфильмов и мультсериалов по возрасту ребёнка (данные TMDB).
+ * Picks movies, cartoons and animated series by the child's age (TMDB data).
  */
 (function () {
     'use strict';
@@ -8,12 +8,12 @@
     if (window.kids_age_plugin) return;
     window.kids_age_plugin = true;
 
-    // Версия плагина: видна в заголовке выбора возраста, чтобы отличать dev от prod
+    // Plugin version: shown in the age picker title to tell dev from prod
     var VERSION = '2.0.0';
 
     var STORAGE_KEY = 'kids_age_last';
 
-    // Жанры TMDB
+    // TMDB genres
     var G = {
         animation: 16,
         family: 10751,
@@ -21,12 +21,12 @@
         fantasy: 14,
         comedy: 35,
         scifi: 878,
-        // исключаемые для детей
+        // excluded for kids
         horror: 27,
         thriller: 53,
         crime: 80,
         war: 10752,
-        // сериалы
+        // TV series
         tv_kids: 10762,
         tv_action: 10759,
         tv_scifi: 10765,
@@ -39,15 +39,15 @@
 
     var MOVIE_EXCLUDE = [G.horror, G.thriller, G.crime, G.war].join(',');
 
-    // Студии (компании TMDB)
+    // Studios (TMDB companies)
     var STUDIO_GHIBLI = 10342;
     var TV_EXCLUDE = [G.crime, G.tv_war, G.tv_news, G.tv_reality, G.tv_soap, G.tv_talk, G.horror].join(',');
 
     /*
-     * Возрастные группы.
-     * cert    — максимальный рейтинг MPAA (США) для фильмов.
-     * tvCerts — допустимые рейтинги сериалов (США); TMDB фильтрует их только списком.
-     * tv      — жанры для сериалов.
+     * Age groups.
+     * cert    — maximum MPAA (US) rating for movies.
+     * tvCerts — allowed US TV ratings; TMDB filters them only as a list.
+     * tv      — genres for TV series.
      */
     var AGES = [
         { id: '0-6',   title: 'до 6 лет',   cert: 'G',     tv: [G.tv_kids], tvCerts: ['TV-Y', 'TV-Y7', 'TV-G'], live_action: true },
@@ -57,7 +57,7 @@
     ];
 
     function ageById(id) {
-        // раньше были группы 0–3 и 4–6, теперь это одна группа «до 6 лет»
+        // there used to be 0–3 and 4–6 groups; now it is a single "under 6" group
         if (id === '0-3' || id === '4-6') id = '0-6';
         for (var i = 0; i < AGES.length; i++) if (AGES[i].id === id) return AGES[i];
         return null;
@@ -71,13 +71,13 @@
         return new Date(Date.now() - n * 365 * 86400000).toISOString().slice(0, 10);
     }
 
-    // Кассовых фильмов и детских сериалов для малышей мало, поэтому для них окно шире
+    // There are few box-office movies and kids' series for toddlers, so their window is wider
     function hitsYears(age) {
         return age.cert === 'G' ? 10 : 3;
     }
 
-    // Допустимые рейтинги фильмов списком. Фильтр certification.lte не подходит:
-    // у рейтинга NR («без рейтинга») порядок 0, и он пропускает неоценённые фильмы.
+    // Allowed movie ratings as a list. certification.lte does not work here:
+    // NR ("not rated") has order 0, so it lets unrated movies through.
     var MOVIE_CERTS = ['G', 'PG', 'PG-13'];
 
     function movieCerts(age) {
@@ -93,8 +93,8 @@
     }
 
     /*
-     * popular — популярные, top — лучшие по оценке, fresh — популярные за последние годы,
-     * latest — самые последние вышедшие, box_office — по сборам в прокате, hits — больше всего оценок.
+     * popular — popular, top — best rated, fresh — popular in recent years,
+     * latest — most recently released, box_office — by box office, hits — most votes.
      */
     var SORTS = {
         popular:    { sort_by: 'popularity.desc', 'vote_count.gte': 50 },
@@ -109,7 +109,7 @@
         return (new Date().getFullYear() - 2) + '-01-01';
     }
 
-    // Фильмы / мультфильмы
+    // Movies / cartoons
     function movieUrl(age, kind, sort) {
         var p = {
             include_adult: 'false',
@@ -123,7 +123,7 @@
         } else if (kind === 'ghibli') {
             p.with_companies = STUDIO_GHIBLI;
         } else {
-            // живые фильмы: семейные, но не анимация
+            // live-action movies: family, but not animation
             p.with_genres = G.family;
             p.without_genres = MOVIE_EXCLUDE + ',' + G.animation;
         }
@@ -138,7 +138,7 @@
 
         if (sort === 'latest') p['primary_release_date.lte'] = today();
 
-        // фильмы без проката (сборы 0) при такой сортировке уходят в конец списка
+        // movies without a theatrical release (revenue 0) go to the end with this sort order
         if (sort === 'box_office') {
             p['primary_release_date.gte'] = yearsAgo(hitsYears(age));
             p['primary_release_date.lte'] = today();
@@ -147,7 +147,7 @@
         return query('discover/movie', p);
     }
 
-    // Мультсериалы / сериалы
+    // Animated series / TV series
     function tvUrl(age, kind, sort) {
         var p = {
             include_adult: 'false',
@@ -157,10 +157,10 @@
         };
 
         if (kind === 'cartoon_series') {
-            // для младших — только «детский» жанр, для старших — любая анимация
+            // younger kids get only the "Kids" genre, older ones any animation
             p.with_genres = age.id === '10-12' || age.id === '13-15' ? String(G.animation) : G.animation + ',' + G.tv_kids;
         } else {
-            // все подходящие сериалы для возраста, кроме анимации
+            // all age-appropriate series except animation
             p.with_genres = age.tv.join('|');
             p.without_genres = TV_EXCLUDE + ',' + G.animation;
         }
@@ -175,7 +175,7 @@
             p['first_air_date.lte'] = today();
         }
 
-        // сборов у сериалов нет: хиты — больше всего оценок среди выходивших в последние годы
+        // series have no box office: hits are the most-voted among those aired in recent years
         if (sort === 'hits') p['air_date.gte'] = yearsAgo(hitsYears(age));
 
         return query('discover/tv', p);
@@ -288,6 +288,6 @@
         });
     }
 
-    // экспорт для отладки
+    // exported for debugging
     window.kids_age_plugin_api = { version: VERSION, ages: AGES, sections: sections, age: ageById };
 })();

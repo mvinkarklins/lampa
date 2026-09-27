@@ -1,8 +1,8 @@
-// Кнопка «Дорожки LG» в панели плеера Лампы на телевизорах LG (webOS).
-// Список звуковых дорожек Лампа получает от медиасервиса телевизора, но ищет
-// видео всего ~1 секунду после старта. Торрент стартует дольше, список не
-// приходит, и штатная кнопка дорожек остаётся скрытой. Эта кнопка запрашивает
-// список по нажатию, когда видео уже играет, и не перезапускает воспроизведение.
+// «Дорожки LG» (LG tracks) button in the Lampa player panel on LG TVs (webOS).
+// Lampa gets the audio track list from the TV media service, but looks for
+// the video for only ~1 second after start. Torrents start slower, the list never
+// arrives, and the built-in tracks button stays hidden. This button requests
+// the list on press, while the video is already playing, without restarting playback.
 (function () {
     'use strict';
 
@@ -52,7 +52,7 @@
         return name.join(' · ');
     }
 
-    // дорожки в виде, который понимает штатная кнопка Лампы (как в её webos/parser.js)
+    // tracks in the shape Lampa's built-in button expects (as in its webos/parser.js)
     function lampaTracks(list, mediaId) {
         return list.map(function (t, i) {
             var track = {
@@ -90,7 +90,7 @@
         });
     }
 
-    // запасной путь: стандартный video.audioTracks, если телевизор его поддерживает
+    // fallback: standard video.audioTracks, if the TV supports it
     function html5Tracks(v) {
         var at = v && v.audioTracks;
         if (!at || !at.length) return null;
@@ -150,7 +150,7 @@
 
             if (!list.length) return Lampa.Noty.show('Телевизор не нашёл звуковых дорожек в файле');
 
-            // передаём Лампе, чтобы появилась и штатная кнопка дорожек
+            // hand the list to Lampa so its built-in tracks button appears too
             try { Lampa.PlayerPanel.setTracks(lampaTracks(list, mediaId)); } catch (e) {}
 
             if (list.length === 1) Lampa.Noty.show('В файле одна звуковая дорожка: ' + trackName(list[0], 0));

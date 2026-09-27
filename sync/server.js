@@ -1,11 +1,11 @@
 'use strict';
 
-// Сервер синхронизации профилей Лампы. Хранит JSON-файлы в DATA_DIR:
-//   profiles.json — список профилей
-//   shared.json   — общие настройки (TorrServer, парсер)
-//   p_<id>.json   — данные профиля (закладки, история, таймкоды)
-// Каждое значение хранится как {v: строка из localStorage, t: время изменения в мс};
-// при слиянии побеждает более позднее время.
+// Lampa profile sync server. Stores JSON files in DATA_DIR:
+//   profiles.json — list of profiles
+//   shared.json   — shared settings (TorrServer, parser)
+//   p_<id>.json   — profile data (bookmarks, history, timecodes)
+// Each value is stored as {v: localStorage string, t: change time in ms};
+// on merge the later time wins.
 
 var http = require('http');
 var fs = require('fs');
@@ -28,7 +28,7 @@ function readJson(name, empty) {
     }
 }
 
-// запись через временный файл, чтобы при сбое не остался обрезанный JSON
+// write via a temp file so a crash never leaves truncated JSON
 function writeJson(name, data) {
     var tmp = file(name) + '.tmp';
     fs.writeFileSync(tmp, JSON.stringify(data));
@@ -73,7 +73,7 @@ function isEntry(e) {
     return e && typeof e.v === 'string' && typeof e.t === 'number';
 }
 
-// слить входящие значения со старыми, вернуть итог
+// merge incoming values with stored ones and return the result
 function merge(scope, incoming) {
     var store = readJson(scope, {});
     var changed = false;
@@ -98,7 +98,7 @@ function scopeName(id) {
 var server = http.createServer(function (req, res) {
     var url = req.url.split('?')[0];
 
-    // лог запросов: кто (IP, устройство) и в какой профиль ходит
+    // request log: who (IP, device) accesses which profile
     if (req.method !== 'OPTIONS' && url !== '/health') {
         var ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').replace('::ffff:', '');
         var ua = String(req.headers['user-agent'] || '').replace(/^Mozilla\/5\.0 /, '').slice(0, 60);
@@ -158,5 +158,5 @@ var server = http.createServer(function (req, res) {
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
 server.listen(PORT, function () {
-    console.log('lampa-sync слушает порт ' + PORT + ', данные в ' + DATA_DIR);
+    console.log('lampa-sync listening on port ' + PORT + ', data in ' + DATA_DIR);
 });

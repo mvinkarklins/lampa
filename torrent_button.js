@@ -1,10 +1,10 @@
-// Кнопка «Торренты» прямо на карточке фильма, рядом с «Смотреть».
-// Штатно её можно закрепить долгим нажатием в окне выбора источника,
-// но на пультах LG долгое нажатие не срабатывает.
+// «Торренты» (Torrents) button right on the movie card, next to «Смотреть» (Watch).
+// Lampa can pin it natively with a long press in the source picker,
+// but long press does not work on LG remotes.
 //
-// По нажатию можно выбрать, где искать: свой парсер из настроек (Prowlarr)
-// публичный JacRed, если свой не отвечает, или оба сразу. Выбор задаётся и в
-// Настройки → Парсер → «Кнопка «Торренты» на карточке».
+// On press you choose where to search: your own parser from settings (Prowlarr),
+// a public JacRed if yours is down, or both at once. The default is also set in
+// Settings → Parser → «Кнопка «Торренты» на карточке».
 (function () {
     'use strict';
 
@@ -14,7 +14,7 @@
     var SETTING = 'tbutton_source';
     var LAST = 'tbutton_last';
 
-    // публичные JacRed, проверенные 26.09.2026
+    // public JacRed instances, checked on 2026-09-26
     var PUBLIC = ['jac.red', 'jac-red.ru', 'jr.maxvol.pro'];
 
     var BOTH = 'both';
@@ -22,10 +22,10 @@
     SOURCES[BOTH] = 'Везде: мой парсер + ' + PUBLIC[0];
     PUBLIC.forEach(function (host) { SOURCES[host] = host; });
 
-    // Поиск через публичный парсер: подменяем ответ Storage.field только на время
-    // синхронного запуска поиска (Лампа читает настройки парсера в этот момент).
-    // В localStorage ничего не пишем, чтобы временные значения не разошлись
-    // по устройствам через синхронизацию профилей.
+    // Search via a public parser: we override Storage.field answers only while the
+    // search starts synchronously (Lampa reads parser settings at that moment).
+    // Nothing is written to localStorage, so temporary values do not spread
+    // to other devices through profile sync.
     var pending = null;
     var active = null;
 
@@ -39,7 +39,7 @@
         };
     }
 
-    // одна раздача из разных парсеров: одинаковое название и размер
+    // the same release from different parsers: same title and size
     function resultKey(item) {
         return String(item.Title || '').toLowerCase().replace(/\s+/g, ' ').trim() + '|' + (item.Size || '');
     }
@@ -63,14 +63,14 @@
         }
 
         Lampa.Parser.get = function (params, oncomplite, onerror) {
-            // подмена действует только на поиск, запущенный нашей кнопкой в ближайшие секунды
+            // the override only applies to a search started by our button in the last few seconds
             var job = pending && Date.now() - pending.time < 10000 ? pending : null;
             pending = null;
 
             if (!job) return get.apply(this, arguments);
             if (!job.both) return run(this, job.settings, params, oncomplite, onerror);
 
-            // оба парсера параллельно: сначала свои результаты, затем публичные без повторов
+            // both parsers in parallel: own results first, then public ones without duplicates
             var results = [null, null];
             var errors = [];
             var left = 2;
@@ -163,7 +163,7 @@
         var source = body.find('.buttons--container .view--torrent');
         var row = body.find('.full-start-new__buttons');
 
-        // Парсер выключен или торренты скрыты сборкой — кнопки нет.
+        // Parser is off or torrents are hidden by this build — no button.
         if (!source.length || source.hasClass('hide') || !row.length) return;
         if (row.find('.button--torrent-direct').length) return;
 

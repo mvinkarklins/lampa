@@ -1,6 +1,6 @@
-// Профили Лампы с синхронизацией через свой сервер на NAS (папка sync/).
-// У каждого профиля свои закладки, история и таймкоды; настройки TorrServer
-// и парсера общие для всех профилей и устройств.
+// Lampa profiles synced through your own server on a NAS (sync/ folder).
+// Each profile has its own bookmarks, history and timecodes; TorrServer
+// and parser settings are shared across all profiles and devices.
 (function () {
     'use strict';
 
@@ -12,25 +12,25 @@
     var SYNC_EVERY = 5 * 60 * 1000;
     var PUSH_DELAY = 5000;
 
-    // данные профиля: точные ключи и префиксы (file_view_<id> у аккаунта CUB)
+    // profile data: exact keys and prefixes (file_view_<id> with a CUB account)
     var PROFILE_KEYS = ['favorite', 'online_view', 'torrents_view', 'search_history',
         'online_last_balanser', 'user_clarifys', 'torrents_filter_data', 'kids_age_last',
-        // выбор парсера для кнопки «Торренты» (torrent_button.js)
+        // parser choice for the «Торренты» button (torrent_button.js)
         'tbutton_source', 'tbutton_last',
-        // интерфейс Neo (neo.js)
+        // Neo interface (neo.js)
         'neo_enabled', 'neo_theme', 'neo_hero', 'neo_cards'];
     var PROFILE_PREFIXES = ['file_view'];
 
-    // общие настройки для всех профилей
+    // settings shared by all profiles
     var SHARED_KEYS = ['torrserver_url', 'torrserver_url_two', 'torrserver_use_link',
         'torrserver_auth', 'torrserver_login', 'torrserver_password',
         'parser_use', 'parser_torrent_type', 'parser_use_link', 'parse_lang',
         'prowlarr_url', 'prowlarr_key', 'prowlarr_url_two', 'prowlarr_key_two',
         'jackett_url', 'jackett_key', 'jackett_url_two', 'jackett_key_two',
-        // список установленных плагинов; после его смены Лампу нужно перезапустить
+        // installed plugins list; Lampa must restart after it changes
         'plugins'];
 
-    // служебные ключи плагина пишем в localStorage напрямую, мимо Lampa.Storage
+    // the plugin's own keys go to localStorage directly, bypassing Lampa.Storage
     var META_URL = 'nsync_url';
     var META_PROFILE = 'nsync_profile';
     var META_STATE = 'nsync_state';
@@ -64,7 +64,7 @@
         return null;
     }
 
-    // состояние синхронизации: {scope: {key: {t: время, h: хэш значения}}}
+    // sync state: {scope: {key: {t: time, h: value hash}}}
     function loadState() {
         try {
             return JSON.parse(ls(META_STATE) || '{}');
@@ -83,7 +83,7 @@
         return str.length + ':' + h;
     }
 
-    // список плагинов с сервера плюс те, что есть только на этом устройстве
+    // plugins from the server plus those only present on this device
     function mergePlugins(localRaw, remoteRaw) {
         try {
             var remote = JSON.parse(remoteRaw);
@@ -144,15 +144,15 @@
         xhr.send(body === undefined ? null : JSON.stringify(body));
     }
 
-    // записать значение с сервера так, чтобы Лампа сразу его увидела
+    // write a value from the server so Lampa picks it up immediately
     function apply(key, raw) {
         var value = raw;
         try { value = JSON.parse(raw); } catch (e) {}
         Lampa.Storage.set(key, value, true);
     }
 
-    // синхронизация одной области: shared или id профиля.
-    // force — взять всё с сервера (при смене профиля)
+    // sync one scope: shared or a profile id.
+    // force — take everything from the server (when switching profiles)
     function syncScope(scope, force, done) {
         request('GET', '/api/store/' + scope, undefined, function (err, remote) {
             if (err) return done(err);
@@ -163,7 +163,7 @@
             var pulled = [];
             var now = Date.now();
 
-            // локальные изменения, которых сервер ещё не видел
+            // local changes the server has not seen yet
             localKeys(scope).forEach(function (key) {
                 var raw = ls(key);
                 if (raw === null) return;
@@ -178,13 +178,13 @@
                 }
             });
 
-            // более свежие значения с сервера
+            // newer values from the server
             Object.keys(remote).forEach(function (key) {
                 if (scope === 'shared' ? !isSharedKey(key) : !isProfileKey(key)) return;
                 var r = remote[key];
                 var known = st[key];
 
-                // первая синхронизация плагинов на устройстве: объединяем списки, чтобы не потерять свои
+                // first plugin sync on a device: merge lists so its own plugins are not lost
                 if (key === 'plugins' && !force && (!known || known.t === 0) && ls(key)) {
                     var merged = mergePlugins(ls(key), r.v);
                     if (merged !== r.v) {
@@ -201,7 +201,7 @@
                         apply(key, r.v);
                         pulled.push(key);
                     }
-                    // Лампа может пересобрать JSON иначе, хэш берём от того, что записалось
+                    // Lampa may re-serialize JSON differently, so hash what was actually written
                     st[key] = { t: r.t, h: hash(ls(key) || r.v) };
                 }
             });
@@ -264,7 +264,7 @@
         saveState(state);
     }
 
-    // сменить профиль: отправить текущие данные, очистить, скачать данные нового и перезапустить
+    // switch profile: push current data, clear it, fetch the new profile and restart
     function switchTo(id) {
         if (id === currentId()) return;
 
@@ -279,7 +279,7 @@
             });
         };
 
-        // устройство впервые выбирает профиль: объединяем его данные с профилем, а не стираем
+        // device picks a profile for the first time: merge its data into the profile instead of wiping it
         if (!currentId()) {
             ls(META_PROFILE, id);
             return syncAll(function (err) {
@@ -401,7 +401,7 @@
         });
     }
 
-    // данные профиля и общие настройки на устройстве заменяются серверными
+    // profile data and shared settings on the device are replaced with the server's
     function forcePull() {
         if (busy) return Lampa.Noty.show('Идёт синхронизация, попробуйте через пару секунд');
         busy = true;
@@ -438,7 +438,7 @@
         return data;
     }
 
-    // данные устройства заменяют серверные: профиль на сервере очищается и пишется заново
+    // device data replaces the server's: the profile on the server is cleared and rewritten
     function forcePush() {
         if (busy) return Lampa.Noty.show('Идёт синхронизация, попробуйте через пару секунд');
         busy = true;
@@ -485,7 +485,7 @@
         loadProfiles(function (err) {
             if (err) return Lampa.Noty.show('Профили: ' + err.message);
 
-            // первый запуск: создаём профиль из того, что уже есть на устройстве
+            // first run: create a profile from what is already on the device
             if (!profiles.length) {
                 profiles = [{ id: 'main', name: 'Основной' }];
                 return saveProfiles(function (err2) {
@@ -496,7 +496,7 @@
                 });
             }
 
-            // устройство ещё не выбрало профиль или его профиль удалили
+            // the device has no profile selected yet, or its profile was deleted
             if (!currentProfile()) {
                 ls(META_PROFILE, null);
                 updateMenu();

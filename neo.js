@@ -1,11 +1,11 @@
-// «Neo» — новый интерфейс Лампы с темами: Netflix, Apple TV, Минимализм,
-// Детская и Кинозал.
-//  - тёмная тема, скруглённые постеры, заметный фокус;
-//  - на главной и в подборках над рядами большой блок с фоном, логотипом
-//    и описанием фильма, на котором стоит фокус;
-//  - в карточке фильма логотип вместо названия, цветной рейтинг, кнопки-«таблетки».
-// Включается в Настройки → Интерфейс → «Интерфейс Neo». Флажок хранится
-// в профиле (profiles.js), поэтому у каждого профиля свой выбор.
+// «Neo» — a new Lampa interface with themes: Netflix, Apple TV, Minimal,
+// Kids and Cinema.
+//  - dark theme, rounded posters, clear focus;
+//  - on the home screen and in collections, a large block above the rows with the backdrop,
+//    logo and description of the focused movie;
+//  - on the movie card, a logo instead of the title, colored rating, pill buttons.
+// Enabled in Settings → Interface → «Интерфейс Neo». The flag is stored
+// in the profile (profiles.js), so each profile has its own choice.
 (function () {
     'use strict';
 
@@ -29,9 +29,9 @@
         return Lampa.Storage.get(SETTING, false) === true || Lampa.Storage.get(SETTING, false) === 'true';
     }
 
-    // ---------- стили ----------
+    // ---------- styles ----------
 
-    // Темы задают только переменные; каркас ниже общий для всех тем.
+    // Themes only set variables; the layout below is shared by all themes.
     var THEMES = {
         netflix: 'Netflix — тёмная, красный акцент',
         apple: 'Apple TV — светлое стекло, мягкий фокус',
@@ -41,7 +41,7 @@
     };
 
     var CSS = [
-        // ---- переменные тем ----
+        // ---- theme variables ----
         'body.neo{--neo-bg:#0b0c10;--neo-tint:rgba(11,12,16,.55);--neo-head:rgba(11,12,16,.92);--neo-accent:#e50914;--neo-text:#f5f5f1;--neo-dim:#a3a3a3;' +
             '--neo-radius:14px;--neo-scale:1.07;--neo-focus:0 0 0 3px var(--neo-accent),0 14px 34px rgba(0,0,0,.6);' +
             '--neo-menu:linear-gradient(90deg,rgba(11,12,16,.96),rgba(11,12,16,.6));--neo-menu-focus:rgba(255,255,255,.12);--neo-menu-mark:inset 4px 0 0 var(--neo-accent);' +
@@ -78,7 +78,7 @@
             '--neo-weight:800;--neo-line-title:1.35em;' +
             '--neo-btn:transparent;--neo-btn-focus:var(--neo-accent);--neo-btn-focus-text:#050505;--neo-play:transparent;--neo-play-text:var(--neo-accent)}',
 
-        // ---- размер баннера (после тем, чтобы перекрывать их) ----
+        // ---- banner size (after themes so it overrides them) ----
         'body.neo.neo-hero-compact{--neo-hero-h:33vh;--neo-hero-pad:26vh;--neo-hero-title:2.1em}',
         'body.neo.neo-hero-compact .neo-hero__info{bottom:3.2em;width:58%}',
         'body.neo.neo-hero-compact .neo-hero__logo{max-height:3.8em;margin-bottom:.4em}',
@@ -88,24 +88,24 @@
         'body.neo.neo-hero-off .neo-hero{display:none}',
         'body.neo.neo-hero-off .neo-host .activity__body{padding-top:0}',
 
-        // ---- размер постеров в рядах (штатно 12.75em) ----
+        // ---- poster size in rows (Lampa default 12.75em) ----
         'body.neo.neo-cards-small .items-line .card{width:10.2em}',
         'body.neo.neo-cards-tiny .items-line .card{width:8.6em}',
         'body.neo.neo-cards-tiny .items-line .card__title{font-size:.95em}',
 
-        // ---- фон и шапка ----
+        // ---- background and header ----
         'body.neo{background:var(--neo-bg)}',
         'body.neo .background::after{content:"";position:fixed;inset:0;background:var(--neo-tint);pointer-events:none}',
         'body.neo .head__body{background:var(--neo-head)}',
 
-        // ---- левое меню ----
+        // ---- left menu ----
         'body.neo .menu{background:var(--neo-menu)}',
         'body.neo .menu__item{border-radius:12px}',
         'body.neo .menu__item.focus,body.neo .menu__item.hover{background:var(--neo-menu-focus);box-shadow:var(--neo-menu-mark)}',
         'body.neo-t-apple .menu__item.focus,body.neo-t-apple .menu__item.hover{color:#000}',
         'body.neo-t-kids .menu__item.focus,body.neo-t-kids .menu__item.hover{color:#2b1055}',
 
-        // ---- постеры ----
+        // ---- posters ----
         'body.neo .card__view{border-radius:var(--neo-radius);overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.45);transition:transform .2s ease,box-shadow .2s ease}',
         'body.neo .card__img{border-radius:var(--neo-radius)}',
         'body.neo .card.focus .card__view{transform:scale(var(--neo-scale));box-shadow:var(--neo-focus)}',
@@ -119,11 +119,11 @@
         'body.neo .card__vote.neo-mid{background:#f5a623;color:#111}',
         'body.neo .card__vote.neo-bad{background:#e0463b;color:#fff}',
 
-        // ---- заголовки рядов ----
+        // ---- row titles ----
         'body.neo .items-line__title{font-size:var(--neo-line-title);font-weight:var(--neo-weight);letter-spacing:.2px;color:var(--neo-text)}',
         'body.neo-t-cinema .items-line__title{text-transform:uppercase;letter-spacing:.18em;font-size:1.1em;color:var(--neo-accent)}',
 
-        // ---- блок над рядами ----
+        // ---- block above the rows ----
         'body.neo .neo-host{position:relative}',
         'body.neo .neo-host .activity__body{padding-top:var(--neo-hero-pad);box-sizing:border-box}',
         '.neo-hero{position:absolute;left:0;right:0;top:0;height:var(--neo-hero-h);overflow:hidden;pointer-events:none;z-index:0;-webkit-mask-image:linear-gradient(180deg,#000 55%,transparent 100%);mask-image:linear-gradient(180deg,#000 55%,transparent 100%)}',
@@ -131,31 +131,31 @@
         '.neo-hero__bg.show{opacity:1}',
         '.neo-hero::after{content:"";position:absolute;inset:0;background:var(--neo-hero-shade)}',
         '.neo-hero__info{position:absolute;left:3em;bottom:5.5em;width:46%;z-index:1}',
-        // логотипы белым силуэтом: у TMDB бывают тёмные логотипы, а цвет картинки из-за CORS не прочитать
+        // logos as a white silhouette: some TMDB logos are dark, and CORS prevents reading image colors
         '.neo-hero__logo{max-width:100%;max-height:7em;display:none;margin-bottom:.6em;filter:brightness(0) invert(1) drop-shadow(0 4px 12px rgba(0,0,0,.6))}',
         '.neo-hero__title{font-size:var(--neo-hero-title);font-weight:var(--neo-weight);line-height:1.05;color:var(--neo-text);margin-bottom:.35em;text-shadow:0 3px 14px rgba(0,0,0,.7)}',
         '.neo-hero__meta{font-size:1.15em;color:var(--neo-text);margin-bottom:.6em;display:flex;gap:.8em;align-items:center;flex-wrap:wrap}',
         '.neo-hero__rate{padding:.1em .5em;border-radius:6px;font-weight:800}',
         '.neo-hero__descr{font-size:1.1em;line-height:1.45;color:var(--neo-text);opacity:.85;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}',
-        // Apple TV: описание по центру снизу, Кинозал: тонкая золотая линия
+        // Apple TV: description centered at the bottom; Cinema: thin gold line
         'body.neo-t-apple .neo-hero__info{left:0;right:0;width:auto;text-align:center;bottom:4.5em;padding:0 20%}',
         'body.neo-t-apple .neo-hero__logo{margin-left:auto;margin-right:auto}',
         'body.neo-t-apple .neo-hero__meta{justify-content:center}',
         'body.neo-t-cinema .neo-hero__meta{letter-spacing:.08em;text-transform:uppercase;font-size:1em;color:var(--neo-accent)}',
         'body.neo-t-cinema .neo-hero__info::before{content:"";display:block;width:4em;height:2px;background:var(--neo-accent);margin-bottom:1em}',
-        // минимализм: текстовое название вместо логотипа, описание в две строки
+        // minimal: text title instead of logo, two-line description
         'body.neo-t-minimal .neo-hero__logo{display:none!important}',
         'body.neo-t-minimal .neo-hero__title{display:block!important}',
         'body.neo-t-minimal .neo-hero__descr{-webkit-line-clamp:2}',
         'body.neo-t-minimal .neo-hero__info{bottom:4em}',
         'body.neo-t-kids .neo-hero__title{color:#ffd400;text-shadow:0 4px 0 #ff5d8f,0 8px 18px rgba(43,16,85,.6)}',
 
-        // ---- карточка фильма ----
+        // ---- movie card ----
         'body.neo .full-start-new__poster{border-radius:calc(var(--neo-radius) + 4px);overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.6)}',
         'body.neo .full-start-new__title{font-size:3.2em;font-weight:var(--neo-weight);line-height:1.05;color:var(--neo-text)}',
         'body.neo .full-start-new__title.neo-has-logo{font-size:0;line-height:0}',
         'body.neo .neo-full-logo{max-width:70%;max-height:9em;margin:.2em 0 .6em;display:block;filter:brightness(0) invert(1) drop-shadow(0 4px 14px rgba(0,0,0,.7))}',
-        // в детской теме логотипы цветные, с белой обводкой
+        // in the kids theme logos stay colored, with a white outline
         'body.neo-t-kids .neo-hero__logo,body.neo-t-kids .neo-full-logo{filter:drop-shadow(0 0 2px #fff) drop-shadow(0 0 2px #fff) drop-shadow(0 6px 14px rgba(43,16,85,.6))}',
         'body.neo .full-start__button{border-radius:999px;background:var(--neo-btn);color:var(--neo-btn-text);padding-left:1.3em;padding-right:1.3em}',
         'body.neo .full-start__button.focus{background:var(--neo-btn-focus);color:var(--neo-btn-focus-text)}',
@@ -175,7 +175,7 @@
         document.head.appendChild(style);
     }
 
-    // ---------- данные карточек ----------
+    // ---------- card data ----------
 
     function rateClass(vote) {
         vote = parseFloat(vote);
@@ -207,7 +207,7 @@
         }
     }
 
-    // логотип фильма с TMDB (русский, иначе английский, иначе любой); кэшируем
+    // movie logo from TMDB (Russian, else English, else any); cached
     function loadLogo(data, done) {
         if (!data.id || data.source && data.source !== 'tmdb') return done('');
 
@@ -235,7 +235,7 @@
         });
     }
 
-    // ---------- блок над рядами ----------
+    // ---------- block above the rows ----------
 
     function heroFor(activity) {
         var hero = activity.querySelector('.neo-hero');
@@ -289,8 +289,8 @@
                 bg.style.backgroundImage = 'url(' + img.src + ')';
                 bg.classList.add('show');
 
-                // у TMDB нет размера 1920: если фокус задержался, подменяем на оригинал
-                // (обычно 1920×1080), чтобы перебор постеров не тормозил из-за тяжёлых картинок
+                // TMDB has no 1920 size: if focus stays, swap to the original
+                // (usually 1920×1080) so browsing posters does not stall on heavy images
                 hero.neoSharp = setTimeout(function () {
                     var full = new Image();
                     full.onload = function () {
@@ -347,7 +347,7 @@
         if (e.type === 'start') attach(e.object);
     }
 
-    // ---------- карточка фильма ----------
+    // ---------- movie card ----------
 
     function onFull(e) {
         if (e.type !== 'complite' || !enabled()) return;
@@ -376,7 +376,7 @@
         });
     }
 
-    // ---------- включение ----------
+    // ---------- enabling ----------
 
     function theme() {
         var t = Lampa.Storage.get(THEME, 'netflix') + '';
@@ -455,7 +455,7 @@
         Lampa.Listener.follow('activity', onActivity);
         Lampa.Listener.follow('full', onFull);
 
-        // главная открывается раньше, чем загружаются плагины
+        // the home screen opens before plugins are loaded
         if (Lampa.Activity && Lampa.Activity.active) attach(Lampa.Activity.active());
 
         Lampa.Storage.listener.follow('change', function (e) {
