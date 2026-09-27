@@ -3,10 +3,15 @@ name: check
 on:
   push:
   pull_request:
-  # weekly run against the live Lampa, to notice when a Lampa update breaks a plugin
+  # weekly run against the latest Lampa source, to notice when a Lampa update breaks a plugin
   schedule:
     - cron: '0 6 * * 1'
   workflow_dispatch:
+
+env:
+  # Lampa commit the tests run against; the weekly run uses the latest main instead
+  LAMPA_REF: a19a8012a6ca4bef2442d31a61dc65dceda0701f
+  IMAGE: ghcr.io/${{ github.repository_owner }}/lampa-sync
 
 jobs:
   syntax:
@@ -40,21 +45,39 @@ jobs:
       - name: Unit test for LG tracks (webOS is mocked)
         run: node tests/lg_tracks.test.js
 
+      - name: Build Lampa from source
+        run: |
+          ref="$LAMPA_REF"
+          [ "${{ github.event_name }}" = schedule ] && ref=main
+          tests/build-lampa.sh "$ref" "$RUNNER_TEMP/lampa"
+
+      # the smoke test runs the same image the publish job pushes
+      - name: Build the sync server image
+        run: docker build -t lampa-sync:ci sync
+
+      - name: Start Lampa, plugin and sync servers
+        run: |
+          python -m http.server 8091 --bind 127.0.0.1 --directory "$RUNNER_TEMP/lampa/build/github/lampa" > /dev/null 2>&1 &
+          python -m http.server 8090 --bind 127.0.0.1 > /dev/null 2>&1 &
+          docker run -d --name sync -p 127.0.0.1:8080:8080 lampa-sync:ci
+          sleep 3
+          curl -fsS http://127.0.0.1:8091/ > /dev/null
+          curl -fsS http://127.0.0.1:8090/neo.js > /dev/null
+          curl -fsS http://127.0.0.1:8080/health
+
       - name: Install Playwright
         run: |
           pip install playwright==1.49.0
           python -m playwright install --with-deps chromium
 
-      - name: Start plugin and sync servers
-        run: |
-          python -m http.server 8090 --bind 127.0.0.1 > /dev/null 2>&1 &
-          DATA_DIR="$RUNNER_TEMP/sync" PORT=8080 node sync/server.js &
-          sleep 2
-          curl -fsS http://127.0.0.1:8090/neo.js > /dev/null
-          curl -fsS http://127.0.0.1:8080/health
-
-      - name: Smoke test in the live Lampa
+      - name: Smoke test
+        env:
+          LAMPA_URL: http://127.0.0.1:8091/
         run: python tests/smoke.py
+
+      - name: Sync server log
+        if: always()
+        run: docker logs sync || true
 
       - name: Upload screenshots
         if: always()
@@ -62,3 +85,38 @@ jobs:
         with:
           name: screenshots
           path: shots/
+
+  # sync server image: ghcr.io/<owner>/lampa-sync, pushed only when all checks pass
+  #   main   -> :edge
+  #   v3.1.0 -> :3.1.0, :3.1, :latest
+  publish:
+    needs: [syntax, smoke]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=edge,branch=main
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+      - uses: docker/build-push-action@v6
+        with:
+          context: sync
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

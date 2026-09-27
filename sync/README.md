@@ -6,11 +6,25 @@ It has **no authentication**. Run it only inside your home network or behind a V
 
 ## Run
 
-With Docker:
+A ready image is published to GitHub Container Registry for amd64 and arm64:
+
+| Tag | Built from |
+|---|---|
+| `ghcr.io/mvinkarklins/lampa-sync:latest` | the latest release tag |
+| `ghcr.io/mvinkarklins/lampa-sync:X.Y.Z` | release `vX.Y.Z` |
+| `ghcr.io/mvinkarklins/lampa-sync:edge` | the `main` branch |
+
+It is published by CI only after the plugins pass the smoke test against this very image.
 
 ```
-docker build -t lampa-sync:1.0.1 .
-docker run -d -p 8080:8080 -v lampa-sync:/data lampa-sync:1.0.1
+docker run -d -p 8080:8080 -v lampa-sync:/data ghcr.io/mvinkarklins/lampa-sync:latest
+```
+
+Or build it yourself:
+
+```
+docker build -t lampa-sync .
+docker run -d -p 8080:8080 -v lampa-sync:/data lampa-sync
 ```
 
 In microk8s:
