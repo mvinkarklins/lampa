@@ -2,10 +2,11 @@
 
 Releases are git tags served through jsDelivr (`@latest` is the newest tag). Each plugin also has its own `VERSION` constant.
 
-## Unreleased
+## v3.0.1 — 2026-09-27
 
 - Repository layout: short README with a plugin index, per-plugin docs and Neo screenshots in `docs/`, `sync/README.md` for the sync server, MIT license, GitHub Actions for syntax checks and jsDelivr cache purge on release.
 - Tests: CI builds Lampa from source (pinned commit; the weekly run uses the latest `main`), loads all plugins into it in headless Chromium with the sync server running from its Docker image, and checks each plugin works; a unit test covers LG tracks with a mocked webOS.
+- `sync/k8s.yaml` runs the published image `ghcr.io/mvinkarklins/lampa-sync:latest` instead of a locally built one.
 - The sync server image is published to `ghcr.io/mvinkarklins/lampa-sync` (amd64 and arm64) after the tests pass: `edge` from `main`, `X.Y.Z` and `latest` from release tags.
 
 ## v3.0.0 — 2026-09-27

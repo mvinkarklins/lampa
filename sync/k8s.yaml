@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
         - name: sync
-          image: docker.io/library/lampa-sync:1.0.1
-          imagePullPolicy: Never
+          image: ghcr.io/mvinkarklins/lampa-sync:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
           volumeMounts:

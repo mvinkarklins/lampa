@@ -27,13 +27,13 @@ docker build -t lampa-sync .
 docker run -d -p 8080:8080 -v lampa-sync:/data lampa-sync
 ```
 
-In microk8s:
+In Kubernetes (microk8s here), with the published image:
 
 ```
-docker build -t lampa-sync:1.0.1 .
-docker save lampa-sync:1.0.1 | microk8s ctr image import -
 microk8s kubectl apply -f k8s.yaml
 ```
+
+`k8s.yaml` uses `:latest` with `imagePullPolicy: Always`, so after a release `microk8s kubectl -n media rollout restart deploy/lampa-sync` picks up the new version.
 
 `k8s.yaml` exposes the server through a MetalLB `LoadBalancer` at `192.168.1.25` and keeps data in a hostPath volume. Change both for your network. The plugin uses `http://192.168.1.25` by default; another address can be set in Lampa: profile menu → «Сервер».
 
