@@ -4,3 +4,7 @@ node_modules/
 
 # Local Claude Code settings
 /.claude/
+
+# screenshots from tests/smoke.py
+.shots/
+shots/

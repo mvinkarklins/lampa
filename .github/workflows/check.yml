@@ -3,6 +3,10 @@ name: check
 on:
   push:
   pull_request:
+  # weekly run against the live Lampa, to notice when a Lampa update breaks a plugin
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
 
 jobs:
   syntax:
@@ -13,7 +17,7 @@ jobs:
         with:
           node-version: 20
       - name: Syntax check
-        run: for f in *.js sync/*.js; do node --check "$f"; done
+        run: for f in *.js sync/*.js tests/*.js; do node --check "$f"; done
       # plugins run on old TV browsers, so they must stay ES5
       - name: No ES6 syntax in plugins
         run: |
@@ -21,3 +25,40 @@ jobs:
             echo "ES6 syntax found in a plugin" >&2
             exit 1
           fi
+
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Unit test for LG tracks (webOS is mocked)
+        run: node tests/lg_tracks.test.js
+
+      - name: Install Playwright
+        run: |
+          pip install playwright==1.49.0
+          python -m playwright install --with-deps chromium
+
+      - name: Start plugin and sync servers
+        run: |
+          python -m http.server 8090 --bind 127.0.0.1 > /dev/null 2>&1 &
+          DATA_DIR="$RUNNER_TEMP/sync" PORT=8080 node sync/server.js &
+          sleep 2
+          curl -fsS http://127.0.0.1:8090/neo.js > /dev/null
+          curl -fsS http://127.0.0.1:8080/health
+
+      - name: Smoke test in the live Lampa
+        run: python tests/smoke.py
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: shots/

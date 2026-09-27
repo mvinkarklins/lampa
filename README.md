@@ -43,7 +43,8 @@ The script tags the commit, pushes the tag and purges the jsDelivr `@latest` cac
 | `docs/` | documentation of each plugin and screenshots |
 | `sync/` | the profile sync server |
 | `release.sh` | release all plugins: tag, push, purge the jsDelivr cache |
-| `.github/workflows/` | syntax and ES5 checks on every push; jsDelivr cache purge on every tag |
+| `tests/` | smoke test in the live Lampa (headless Chromium) and a unit test for LG tracks |
+| `.github/workflows/` | syntax and ES5 checks and the tests on every push and weekly; jsDelivr cache purge on every tag |
 | `CHANGELOG.md` | changes per release |
 
 The Stremio addon has moved to its own repository, [stremio-hits](https://github.com/mvinkarklins/stremio-hits).

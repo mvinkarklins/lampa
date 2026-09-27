@@ -5,6 +5,7 @@ Releases are git tags served through jsDelivr (`@latest` is the newest tag). Eac
 ## Unreleased
 
 - Repository layout: short README with a plugin index, per-plugin docs and Neo screenshots in `docs/`, `sync/README.md` for the sync server, MIT license, GitHub Actions for syntax checks and jsDelivr cache purge on release.
+- Tests: a smoke test loads all plugins into the live Lampa web app in headless Chromium and checks each one works; a unit test covers LG tracks with a mocked webOS. They run on every push and weekly.
 
 ## v3.0.0 — 2026-09-27
 
