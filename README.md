@@ -7,10 +7,10 @@ The plugins' own interface is in Russian, like Lampa itself; Russian names of bu
 | Plugin | What it does | Link |
 |---|---|---|
 | Kids («Детям») | movies and cartoons picked by the child's age | `https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/kids_age.js` |
-| Torrents button | a «Торренты» button on the movie card; searches your own parser and public JacRed | `https://mvinkarklins.github.io/lampa/torrent_button.js` |
-| Neo interface | a redesigned Lampa with five themes | `https://mvinkarklins.github.io/lampa/neo.js` |
-| LG tracks | audio track picker in the player on LG TVs | `https://mvinkarklins.github.io/lampa/lg_tracks.js` |
-| Profiles | profiles and sync through your own server (`sync/`) | `https://mvinkarklins.github.io/lampa/profiles.js` |
+| Torrents button | a «Торренты» button on the movie card; searches your own parser and public JacRed | `https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/torrent_button.js` |
+| Neo interface | a redesigned Lampa with five themes | `https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/neo.js` |
+| LG tracks | audio track picker in the player on LG TVs | `https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/lg_tracks.js` |
+| Profiles | profiles and sync through your own server (`sync/`) | `https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/profiles.js` |
 
 All plugins are plain ES5 JavaScript with no build step, so they run on old TV browsers.
 
@@ -51,29 +51,29 @@ Filtering:
 
 Movies and series without a US rating (NR) are not shown. Horror, thriller, crime and war are always excluded (for series also news, reality, soap and talk shows).
 
-### Development and releases
+## Development and releases
 
-There are two links to the plugin:
+Every plugin has two links:
 
 | | Link | Serves | Updates |
 |---|---|---|---|
-| **prod** | `https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/kids_age.js` | the latest release (tag `vX.Y.Z`) | after a release, up to 12 hours |
-| **dev** | `https://mvinkarklins.github.io/lampa/kids_age.js` | the current `main` branch (GitHub Pages) | 1–2 minutes after a push |
+| **prod** | `https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/<file>.js` | the latest release (tag `vX.Y.Z`) | right after `release.sh`, otherwise up to 12 hours |
+| **dev** | `https://mvinkarklins.github.io/lampa/<file>.js` | the current `main` branch (GitHub Pages) | 1–2 minutes after a push |
 
-To test changes, install the dev link in Lampa. When everything works, release a version:
+To test changes, install the dev link in Lampa. When everything works, bump `VERSION` in the changed plugin, commit, and release all plugins at once:
 
-1. Bump `VERSION` in `kids_age.js` and commit.
-2. Tag and push the tag: `git tag v2.0.1 && git push origin v2.0.1`.
-3. Purge the jsDelivr cache: open `https://purge.jsdelivr.net/gh/mvinkarklins/lampa@latest/kids_age.js`.
+```
+./release.sh 3.0.1
+```
 
-The other plugins are served from GitHub Pages only and update 1–2 minutes after a push to `main`.
+The script tags the commit, pushes the tag and purges the jsDelivr `@latest` cache for every `*.js` file. A specific release can be pinned with `@v3.0.0` instead of `@latest`.
 
 ## Torrents button
 
 `torrent_button.js` puts a «Торренты» button right on the movie card, next to «Смотреть» (Watch). Lampa can pin it natively with a long press in the source picker, but long press does not work on LG remotes.
 
 ```
-https://mvinkarklins.github.io/lampa/torrent_button.js
+https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/torrent_button.js
 ```
 
 On press, the search runs in one of these sources:
@@ -91,7 +91,7 @@ Trackers behind Cloudflare, such as RuTracker and Kinozal, usually cannot be sea
 `neo.js` restyles Lampa: rounded posters with a clear focus and colored ratings; on the home screen and in collections, a banner above the rows shows the backdrop, logo and description of the focused movie; the movie card shows the logo instead of the title and pill-shaped buttons.
 
 ```
-https://mvinkarklins.github.io/lampa/neo.js
+https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/neo.js
 ```
 
 Enable it in Settings → Interface → «Интерфейс Neo». The same section has:
@@ -121,7 +121,7 @@ The on/off flag, theme, banner and poster sizes are stored in the profile, so Ne
 `lg_tracks.js` adds a «Дорожки LG» (LG tracks) button to the Lampa player panel on LG TVs.
 
 ```
-https://mvinkarklins.github.io/lampa/lg_tracks.js
+https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/lg_tracks.js
 ```
 
 Lampa gets the audio track list from the webOS media service, but only looks for the video during the first second after playback starts. Torrents start slower, the list never arrives, and the built-in tracks button stays hidden. The new button requests the list on press, while the movie is already playing (waiting up to 20 seconds), shows a picker and switches the track without restarting the video. It also hands the list to Lampa, so the built-in button appears too. On other devices the plugin does nothing.
@@ -131,7 +131,7 @@ Lampa gets the audio track list from the webOS media service, but only looks for
 `profiles.js` adds a left-menu item with the current profile name. Each profile has its own bookmarks, history, timecodes, age in «Детям», Torrents button choice and Neo settings. TorrServer and parser settings and the list of installed plugins are shared by all profiles and devices; after the plugin list changes, Lampa restarts itself.
 
 ```
-https://mvinkarklins.github.io/lampa/profiles.js
+https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/profiles.js
 ```
 
 ### Server
