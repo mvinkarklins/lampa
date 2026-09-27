@@ -2,7 +2,7 @@
 
 Releases are git tags served through jsDelivr (`@latest` is the newest tag). Each plugin also has its own `VERSION` constant.
 
-## Unreleased
+## v3.0.2 — 2026-09-27
 
 - Sync server image: semantic version tags `X.Y.Z`, `X.Y`, `X` and `latest` for releases, `edge` for `main`, `sha-<commit>` for every build; the version is baked into the image and returned by `/health`. Base image `node:26-alpine` (Dependabot).
 - CI scans all tracked files for secrets with detect-secrets; the image is published only if the scan passes. False positives are marked with a `pragma: allowlist secret` comment on their line.
