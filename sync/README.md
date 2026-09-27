@@ -35,7 +35,7 @@ In Kubernetes (microk8s here), with the published image:
 microk8s kubectl apply -f k8s.yaml
 ```
 
-`k8s.yaml` uses `:latest` with `imagePullPolicy: Always`, so after a release `microk8s kubectl -n media rollout restart deploy/lampa-sync` picks up the new version.
+`k8s.yaml` pins a release version. On every release tag, CI publishes the image and then commits the new version into `k8s.yaml` on `main`; Argo CD (configured in the [home-media](https://github.com/mvinkarklins/home-media) repository) watches this file and rolls the new version out. Without Argo CD, re-apply the file after a release.
 
 `k8s.yaml` exposes the server through a MetalLB `LoadBalancer` at `192.168.1.25` and keeps data in a hostPath volume. Change both for your network. The plugin uses `http://192.168.1.25` by default; another address can be set in Lampa: profile menu → «Сервер».
 

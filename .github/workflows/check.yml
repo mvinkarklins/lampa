@@ -284,9 +284,34 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+  # GitOps: after a release image is published, pin it in sync/k8s.yaml on main.
+  # Argo CD (home-media repository) watches that file and rolls the new version out.
+  # Commits made with GITHUB_TOKEN do not trigger workflows, so this does not loop.
+  deploy:
+    name: 'Deploy: pin release in sync/k8s.yaml'
+    needs: publish
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - name: Set image tag
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          sed -i -E "s#(image: ghcr.io/[^/]+/lampa-sync):.*#\1:${version}#" sync/k8s.yaml
+          grep -n 'image:' sync/k8s.yaml
+          if git diff --quiet; then echo "already at ${version}"; exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -am "Deploy lampa-sync ${version}"
+          git push origin main
+
   report:
     name: 'Report'
-    needs: [lint-js, lint-workflows, lint-shell, lint-dockerfile, lint-docs, secrets-files, secrets-history, unit, build-lampa, build-image, image-platforms, scan-image, sbom, smoke, publish]
+    needs: [lint-js, lint-workflows, lint-shell, lint-dockerfile, lint-docs, secrets-files, secrets-history, unit, build-lampa, build-image, image-platforms, scan-image, sbom, smoke, publish, deploy]
     if: always()
     runs-on: ubuntu-24.04
     steps:
