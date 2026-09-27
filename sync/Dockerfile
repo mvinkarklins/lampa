@@ -11,7 +11,9 @@ RUN apk upgrade --no-cache \
 
 WORKDIR /app
 COPY server.js ./
-ENV NODE_ENV=production PORT=8080 DATA_DIR=/data
+# image version, passed by CI from the git tag (e.g. 3.0.2) or edge-<sha>
+ARG APP_VERSION=dev
+ENV NODE_ENV=production PORT=8080 DATA_DIR=/data APP_VERSION=$APP_VERSION
 EXPOSE 8080
 HEALTHCHECK --interval=60s --timeout=5s CMD ["wget", "-qO", "/dev/null", "http://127.0.0.1:8080/health"]
 CMD ["node", "server.js"]

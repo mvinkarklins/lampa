@@ -127,7 +127,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - run: docker build -t lampa-sync:ci sync
+      - run: docker build --build-arg APP_VERSION=ci-${{ github.sha }} -t lampa-sync:ci sync
       - name: Health check
         run: |
           docker run -d --name sync -p 127.0.0.1:8080:8080 lampa-sync:ci
@@ -243,8 +243,9 @@ jobs:
   # ───────────────────────── stage 3: publish and report ─────────────────────────
 
   # sync server image: ghcr.io/<owner>/lampa-sync, pushed only when all checks pass
-  #   main   -> :edge
-  #   v3.1.0 -> :3.1.0, :3.1, :latest
+  #   main   -> :edge, :sha-<commit>
+  #   v3.1.0 -> :3.1.0, :3.1, :3, :latest, :sha-<commit>
+  # the version is baked into the image and returned by /health
   publish:
     name: 'Publish: ghcr.io image'
     needs: [lint-js, lint-workflows, lint-shell, lint-dockerfile, lint-docs, secrets-files, secrets-history, unit, image-platforms, scan-image, sbom, smoke]
@@ -270,11 +271,14 @@ jobs:
             type=edge,branch=main
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix=sha-,format=short
       - uses: docker/build-push-action@v7
         with:
           context: sync
           platforms: linux/amd64,linux/arm64
           push: true
+          build-args: APP_VERSION=${{ steps.meta.outputs.version }}
           sbom: true
           provenance: true
           tags: ${{ steps.meta.outputs.tags }}

@@ -12,7 +12,9 @@ A ready image is published to GitHub Container Registry for amd64 and arm64:
 |---|---|
 | `ghcr.io/mvinkarklins/lampa-sync:latest` | the latest release tag |
 | `ghcr.io/mvinkarklins/lampa-sync:X.Y.Z` | release `vX.Y.Z` |
+| `ghcr.io/mvinkarklins/lampa-sync:X.Y`, `:X` | the latest release of that minor / major version |
 | `ghcr.io/mvinkarklins/lampa-sync:edge` | the `main` branch |
+| `ghcr.io/mvinkarklins/lampa-sync:sha-<commit>` | a specific commit |
 
 It is published by CI only after the plugins pass the smoke test against this very image.
 
@@ -63,6 +65,6 @@ All responses are JSON with CORS headers, including `Access-Control-Allow-Privat
 | `GET` | `/api/store/<shared\|id>` | stored values `{key: {v, t}}` |
 | `POST` | `/api/store/<shared\|id>` | merge `{key: {v, t}}`, returns the merged store |
 | `DELETE` | `/api/store/<id>` | delete a profile's data (`shared` cannot be deleted) |
-| `GET` | `/health` | `{ok: true}` |
+| `GET` | `/health` | `{ok: true, version}`: the image version (release, `edge`, or `dev` for a local run) |
 
 Requests are logged with the client IP and user agent, which helps to see which device syncs which profile. Request bodies are limited to 20 MB.

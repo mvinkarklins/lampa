@@ -13,6 +13,8 @@ var path = require('path');
 
 var PORT = process.env.PORT || 8080;
 var DATA_DIR = process.env.DATA_DIR || '/data';
+// set at image build time (see .github/workflows/check.yml); "dev" for local runs
+var VERSION = process.env.APP_VERSION || 'dev';
 var MAX_BODY = 20 * 1024 * 1024;
 var ID_RE = /^[a-z0-9_-]{1,32}$/;
 
@@ -110,7 +112,7 @@ var server = http.createServer(function (req, res) {
 
     if (req.method === 'OPTIONS') return send(res, 204);
 
-    if (url === '/health') return send(res, 200, { ok: true });
+    if (url === '/health') return send(res, 200, { ok: true, version: VERSION });
 
     // GET /api/profiles, PUT /api/profiles
     if (parts[0] === 'api' && parts[1] === 'profiles' && parts.length === 2) {
@@ -158,5 +160,5 @@ var server = http.createServer(function (req, res) {
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
 server.listen(PORT, function () {
-    console.log('lampa-sync listening on port ' + PORT + ', data in ' + DATA_DIR);
+    console.log('lampa-sync ' + VERSION + ' listening on port ' + PORT + ', data in ' + DATA_DIR);
 });
