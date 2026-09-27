@@ -1,0 +1,19 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  purge-jsdelivr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # jsDelivr caches @latest for up to 12 hours; purge it so devices get the new tag now
+      - name: Purge jsDelivr @latest
+        run: |
+          for f in *.js; do
+            curl -fsS -o /dev/null "https://purge.jsdelivr.net/gh/${{ github.repository }}@latest/$f"
+            echo "purged $f"
+          done

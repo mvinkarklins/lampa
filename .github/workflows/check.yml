@@ -1,0 +1,23 @@
+name: check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Syntax check
+        run: for f in *.js sync/*.js; do node --check "$f"; done
+      # plugins run on old TV browsers, so they must stay ES5
+      - name: No ES6 syntax in plugins
+        run: |
+          if grep -nE '=>|\blet |\bconst |`' *.js; then
+            echo "ES6 syntax found in a plugin" >&2
+            exit 1
+          fi

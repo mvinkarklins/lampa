@@ -10,7 +10,7 @@ The plugins' own interface is in Russian, like Lampa itself; Russian names of bu
 | Torrents button | a «Торренты» button on the movie card; searches your own parser and public JacRed | `https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/torrent_button.js` |
 | Neo interface | a redesigned Lampa with five themes | `https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/neo.js` |
 | LG tracks | audio track picker in the player on LG TVs | `https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/lg_tracks.js` |
-| Profiles | profiles and sync through your own server (`sync/`) | `https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/profiles.js` |
+| Profiles | profiles and sync through your own server ([`sync/`](sync/README.md)) | `https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/profiles.js` |
 
 All plugins are plain ES5 JavaScript with no build step, so they run on old TV browsers.
 
@@ -106,6 +106,14 @@ Enable it in Settings → Interface → «Интерфейс Neo». The same sec
 | Kids | purple-pink gradient, big corners, yellow focus, colored logos |
 | Cinema | black and gold, spaced uppercase row titles, sharp buttons |
 
+| Netflix | Apple TV |
+|---|---|
+| ![Netflix](docs/neo-netflix.jpg) | ![Apple TV](docs/neo-apple.jpg) |
+| **Minimal** | **Kids** |
+| ![Minimal](docs/neo-minimal.jpg) | ![Kids](docs/neo-kids.jpg) |
+| **Cinema** | |
+| ![Cinema](docs/neo-cinema.jpg) | |
+
 **Banner** («Баннер Neo»): compact (default, about a third of the screen: logo, rating, year, genres, two lines of description), large, or off.
 
 **Posters** («Постеры Neo»): smaller (default, 7–8 posters per row instead of 6), tiny, or normal.
@@ -126,7 +134,7 @@ https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/lg_tracks.js
 
 Lampa gets the audio track list from the webOS media service, but only looks for the video during the first second after playback starts. Torrents start slower, the list never arrives, and the built-in tracks button stays hidden. The new button requests the list on press, while the movie is already playing (waiting up to 20 seconds), shows a picker and switches the track without restarting the video. It also hands the list to Lampa, so the built-in button appears too. On other devices the plugin does nothing.
 
-## Profiles with sync
+## Profiles
 
 `profiles.js` adds a left-menu item with the current profile name. Each profile has its own bookmarks, history, timecodes, age in «Детям», Torrents button choice and Neo settings. TorrServer and parser settings and the list of installed plugins are shared by all profiles and devices; after the plugin list changes, Lampa restarts itself.
 
@@ -134,42 +142,11 @@ Lampa gets the audio track list from the webOS media service, but only looks for
 https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/profiles.js
 ```
 
-### Server
-
-Data is kept by a small server in `sync/`: Node.js with no dependencies, storing JSON files on disk. It has **no authentication**, so run it only inside your home network (or behind a VPN such as Tailscale).
-
-Build and run in microk8s:
-
-```
-cd sync
-docker build -t lampa-sync:1.0.1 .
-docker save lampa-sync:1.0.1 | microk8s ctr image import -
-microk8s kubectl apply -f k8s.yaml
-```
-
-`k8s.yaml` exposes the server through a MetalLB `LoadBalancer` at `192.168.1.25` and stores data in a hostPath volume; change both for your network. The plugin uses `http://192.168.1.25` by default; another address can be set in the profile menu → «Сервер».
-
-Or with plain Docker:
-
-```
-docker run -d -p 8080:8080 -v lampa-sync:/data lampa-sync:1.0.1
-```
-
-API:
-
-| Method | Path | Purpose |
-|---|---|---|
-| `GET` / `PUT` | `/api/profiles` | list of profiles `{profiles: [{id, name}]}` |
-| `GET` | `/api/store/<shared\|id>` | stored values `{key: {v, t}}` |
-| `POST` | `/api/store/<shared\|id>` | merge values; for each key the later `t` wins |
-| `DELETE` | `/api/store/<id>` | delete a profile's data |
-| `GET` | `/health` | health check |
-
-### How it works
+Data is kept by a small self-hosted server; see [sync/README.md](sync/README.md) for running it and its API. The server has no authentication, so keep it inside your home network.
 
 - The first device creates a «Основной» (Main) profile from its own data.
 - A new device asks to pick a profile on startup; on conflict the server's data wins, the rest is merged in.
-- When switching profiles, the current data is pushed to the server, then the new profile's data is loaded and Lampa restarts.
+- When switching profiles, the current data is pushed, the new profile's data is loaded and Lampa restarts.
 - The profile menu has «Синхронизировать сейчас» (sync now), plus «Загрузить с сервера» (download) and «Отправить на сервер» (upload), which fully replace one side with the other after a confirmation.
 - Sync runs on startup, 5 seconds after changes, every 5 minutes and when the app goes to the background; on conflict the later change wins.
 - With a CUB account signed in, Lampa takes bookmarks from the CUB cloud and they override the profiles, so sign out of CUB to use profiles.
@@ -177,3 +154,18 @@ API:
 ## Stremio
 
 The Stremio addon (box office hits, new releases, top series) has moved to its own repository, [stremio-hits](https://github.com/mvinkarklins/stremio-hits).
+
+## Repository layout
+
+| Path | Content |
+|---|---|
+| `*.js` | the plugins; they stay in the root because their paths are their install URLs |
+| `sync/` | the profile sync server |
+| `docs/` | screenshots |
+| `release.sh` | release all plugins: tag, push, purge the jsDelivr cache |
+| `.github/workflows/` | syntax and ES5 checks on every push; jsDelivr cache purge on every tag |
+| `CHANGELOG.md` | changes per release |
+
+## License
+
+[MIT](LICENSE)
