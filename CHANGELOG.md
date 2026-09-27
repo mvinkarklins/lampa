@@ -2,7 +2,7 @@
 
 Releases are git tags served through jsDelivr (`@latest` is the newest tag). Each plugin also has its own `VERSION` constant.
 
-## Unreleased
+## v3.0.3 — 2026-09-27
 
 - GitOps: `sync/k8s.yaml` pins the release version; after publishing a release image, CI commits the new version to `main`, and Argo CD rolls it out.
 
