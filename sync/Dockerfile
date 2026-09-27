@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:26-alpine
 
 # The server has no dependencies, so drop npm, yarn and corepack: they are never used
 # at runtime and their bundled packages carry most of the image's known CVEs.
