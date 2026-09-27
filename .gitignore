@@ -9,3 +9,6 @@ node_modules/
 .shots/
 shots/
 .lampa/
+
+# Python bytecode
+__pycache__/
