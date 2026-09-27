@@ -101,6 +101,15 @@ async def main():
 
     failed = [r for r in results if not r[1]]
     print('\n%d passed, %d failed' % (len(results) - len(failed), len(failed)))
+
+    # result table on the GitHub Actions run page
+    summary = os.environ.get('GITHUB_STEP_SUMMARY')
+    if summary:
+        with open(summary, 'a') as f:
+            f.write('### Smoke test: Lampa %s\n\n| Check | Result | Details |\n|---|---|---|\n' % os.environ.get('LAMPA_LABEL', ''))
+            for name, ok, detail in results:
+                f.write('| %s | %s | %s |\n' % (name, '✅' if ok else '❌', detail.replace('|', '/').replace('\n', ' ')[:200]))
+            f.write('\n**%d passed, %d failed**\n' % (len(results) - len(failed), len(failed)))
     sys.exit(1 if failed else 0)
 
 

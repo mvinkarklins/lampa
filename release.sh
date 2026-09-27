@@ -7,7 +7,10 @@ set -e
 VERSION="$1"
 [ -n "$VERSION" ] || { echo "usage: $0 X.Y.Z" >&2; exit 1; }
 
-git diff --quiet && git diff --cached --quiet || { echo "commit your changes first" >&2; exit 1; }
+if ! git diff --quiet || ! git diff --cached --quiet; then
+    echo "commit your changes first" >&2
+    exit 1
+fi
 
 git tag "v$VERSION"
 git push origin main "v$VERSION"

@@ -9,12 +9,20 @@ on:
   workflow_dispatch:
 
 env:
-  # Lampa commit the tests run against; the weekly run uses the latest main instead
+  # Lampa commit the tests run against; the "latest" matrix leg builds Lampa's main instead
   LAMPA_REF: a19a8012a6ca4bef2442d31a61dc65dceda0701f  # pragma: allowlist secret (a git commit, not a secret)
   IMAGE: ghcr.io/${{ github.repository_owner }}/lampa-sync
 
+# Stages:
+#   1. lint, secret scans, unit tests, Lampa build, image build and platform checks run in parallel
+#   2. image scan and SBOM use the built image; smoke tests use Lampa and the image
+#   3. the image is published only if everything passed; the report job summarizes the run
+
 jobs:
-  syntax:
+  # ───────────────────────── stage 1: lint ─────────────────────────
+
+  lint-js:
+    name: 'Lint: plugins (syntax, ES5)'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,18 +30,46 @@ jobs:
         with:
           node-version: 20
       - name: Syntax check
-        run: for f in *.js sync/*.js tests/*.js; do node --check "$f"; done
-      # plugins run on old TV browsers, so they must stay ES5
-      - name: No ES6 syntax in plugins
-        run: |
-          if grep -nE '=>|\blet |\bconst |`' *.js; then
-            echo "ES6 syntax found in a plugin" >&2
-            exit 1
-          fi
+        run: for f in ./*.js sync/*.js tests/*.js; do node --check "$f"; done
+      # plugins run on old TV browsers, so they must parse as ES5
+      - name: ES5 check
+        run: npx --yes es-check@8 es5 ./kids_age.js ./torrent_button.js ./neo.js ./lg_tracks.js ./profiles.js
+
+  lint-workflows:
+    name: 'Lint: workflows (actionlint)'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color
+
+  lint-shell:
+    name: 'Lint: shell scripts (shellcheck)'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.10.0 release.sh tests/build-lampa.sh
+
+  lint-dockerfile:
+    name: 'Lint: Dockerfile (hadolint)'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker run --rm -i hadolint/hadolint:v2.12.0 < sync/Dockerfile
+
+  lint-docs:
+    name: 'Lint: documentation links (lychee)'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # internal links and anchors only, so the check does not depend on other sites
+      - run: docker run --rm -v "$PWD:/input" -w /input lycheeverse/lychee:0.24.2 --offline --include-fragments --no-progress README.md CHANGELOG.md 'docs/*.md' sync/README.md
+
+  # ───────────────────────── stage 1: secrets ─────────────────────────
 
   # fails if a tracked file contains something that looks like a key, token or password;
   # mark a false positive with a trailing "pragma: allowlist secret" comment on its line
-  secrets:
+  secrets-files:
+    name: 'Secrets: tracked files (detect-secrets)'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,69 +77,177 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install detect-secrets==1.5.0
-      - name: Scan tracked files for secrets
-        run: git ls-files -z | xargs -0 detect-secrets-hook
+      - run: git ls-files -z | xargs -0 detect-secrets-hook
 
-  smoke:
+  secrets-history:
+    name: 'Secrets: git history (gitleaks)'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.21.2 git /repo --no-banner --redact --verbose
+
+  # ───────────────────────── stage 1: tests and builds ─────────────────────────
+
+  unit:
+    name: 'Unit: LG tracks (mocked webOS)'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - uses: actions/setup-python@v5
+      - run: node tests/lg_tracks.test.js
+
+  build-lampa:
+    name: 'Build: Lampa ${{ matrix.lampa }}'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        lampa: [pinned, latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          python-version: '3.12'
-
-      - name: Unit test for LG tracks (webOS is mocked)
-        run: node tests/lg_tracks.test.js
-
+          node-version: 20
       - name: Build Lampa from source
         run: |
           ref="$LAMPA_REF"
-          [ "${{ github.event_name }}" = schedule ] && ref=main
+          [ "${{ matrix.lampa }}" = latest ] && ref=main
           tests/build-lampa.sh "$ref" "$RUNNER_TEMP/lampa"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lampa-${{ matrix.lampa }}
+          path: ${{ runner.temp }}/lampa/build/github/lampa
+          retention-days: 3
 
-      # the smoke test runs the same image the publish job pushes
-      - name: Build the sync server image
-        run: docker build -t lampa-sync:ci sync
+  build-image:
+    name: 'Build: sync server image'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t lampa-sync:ci sync
+      - name: Health check
+        run: |
+          docker run -d --name sync -p 127.0.0.1:8080:8080 lampa-sync:ci
+          sleep 3
+          curl -fsS http://127.0.0.1:8080/health
+      - run: docker save lampa-sync:ci | gzip > image.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: image
+          path: image.tar.gz
+          retention-days: 3
 
+  image-platforms:
+    name: 'Image: runs on ${{ matrix.platform }}'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: sync
+          platforms: ${{ matrix.platform }}
+          load: true
+          tags: lampa-sync:platform
+      - name: Health check under ${{ matrix.platform }}
+        run: |
+          docker run -d --name sync --platform ${{ matrix.platform }} -p 127.0.0.1:8080:8080 lampa-sync:platform
+          for _ in $(seq 1 30); do curl -fsS http://127.0.0.1:8080/health && exit 0; sleep 2; done
+          docker logs sync
+          exit 1
+
+  # ───────────────────────── stage 2: image scan and smoke tests ─────────────────────────
+
+  scan-image:
+    name: 'Image: vulnerability scan (Trivy)'
+    needs: build-image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: image
+      - name: Fail on fixable HIGH and CRITICAL vulnerabilities
+        run: docker run --rm -v "$PWD:/work" aquasec/trivy:0.57.1 image --input /work/image.tar.gz --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1
+
+  sbom:
+    name: 'Image: SBOM (CycloneDX)'
+    needs: build-image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: image
+      - run: docker run --rm -v "$PWD:/work" aquasec/trivy:0.57.1 image --input /work/image.tar.gz --format cyclonedx --output /work/sbom.cdx.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.cdx.json
+
+  smoke:
+    name: 'Smoke: plugins in Lampa ${{ matrix.lampa }}'
+    needs: [build-lampa, build-image, lint-js, unit]
+    runs-on: ubuntu-latest
+    # a break in Lampa's latest main is reported but does not block publishing
+    continue-on-error: ${{ matrix.lampa == 'latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        lampa: [pinned, latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: lampa-${{ matrix.lampa }}
+          path: ${{ runner.temp }}/lampa
+      - uses: actions/download-artifact@v4
+        with:
+          name: image
       - name: Start Lampa, plugin and sync servers
         run: |
-          python -m http.server 8091 --bind 127.0.0.1 --directory "$RUNNER_TEMP/lampa/build/github/lampa" > /dev/null 2>&1 &
+          docker load < image.tar.gz
+          python -m http.server 8091 --bind 127.0.0.1 --directory "$RUNNER_TEMP/lampa" > /dev/null 2>&1 &
           python -m http.server 8090 --bind 127.0.0.1 > /dev/null 2>&1 &
           docker run -d --name sync -p 127.0.0.1:8080:8080 lampa-sync:ci
           sleep 3
           curl -fsS http://127.0.0.1:8091/ > /dev/null
           curl -fsS http://127.0.0.1:8090/neo.js > /dev/null
           curl -fsS http://127.0.0.1:8080/health
-
       - name: Install Playwright
         run: |
           pip install playwright==1.49.0
           python -m playwright install --with-deps chromium
-
       - name: Smoke test
         env:
           LAMPA_URL: http://127.0.0.1:8091/
+          LAMPA_LABEL: ${{ matrix.lampa }}
         run: python tests/smoke.py
-
       - name: Sync server log
         if: always()
         run: docker logs sync || true
-
-      - name: Upload screenshots
+      - uses: actions/upload-artifact@v4
         if: always()
-        uses: actions/upload-artifact@v4
         with:
-          name: screenshots
+          name: screenshots-${{ matrix.lampa }}
           path: shots/
+
+  # ───────────────────────── stage 3: publish and report ─────────────────────────
 
   # sync server image: ghcr.io/<owner>/lampa-sync, pushed only when all checks pass
   #   main   -> :edge
   #   v3.1.0 -> :3.1.0, :3.1, :latest
   publish:
-    needs: [syntax, secrets, smoke]
+    name: 'Publish: ghcr.io image'
+    needs: [lint-js, lint-workflows, lint-shell, lint-dockerfile, lint-docs, secrets-files, secrets-history, unit, image-platforms, scan-image, sbom, smoke]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
     permissions:
@@ -131,5 +275,26 @@ jobs:
           context: sync
           platforms: linux/amd64,linux/arm64
           push: true
+          sbom: true
+          provenance: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  report:
+    name: 'Report'
+    needs: [lint-js, lint-workflows, lint-shell, lint-dockerfile, lint-docs, secrets-files, secrets-history, unit, build-lampa, build-image, image-platforms, scan-image, sbom, smoke, publish]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary of all jobs
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          {
+            echo '## Pipeline report'
+            echo
+            echo '| Job | Result |'
+            echo '|---|---|'
+            echo "$NEEDS" | jq -r 'to_entries[] | "| \(.key) | \(if .value.result == "success" then "✅ success" elif .value.result == "skipped" then "⏭️ skipped" else "❌ \(.value.result)" end) |"'
+          } >> "$GITHUB_STEP_SUMMARY"
+          ! echo "$NEEDS" | jq -e 'to_entries[] | select(.value.result == "failure" or .value.result == "cancelled")' > /dev/null
