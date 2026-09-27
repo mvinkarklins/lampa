@@ -4,7 +4,7 @@ Releases are git tags served through jsDelivr (`@latest` is the newest tag). Eac
 
 ## Unreleased
 
-- Repository layout: `sync/README.md` for the sync server, Neo screenshots in `docs/`, MIT license, GitHub Actions for syntax checks and jsDelivr cache purge on release.
+- Repository layout: short README with a plugin index, per-plugin docs and Neo screenshots in `docs/`, `sync/README.md` for the sync server, MIT license, GitHub Actions for syntax checks and jsDelivr cache purge on release.
 
 ## v3.0.0 — 2026-09-27
 

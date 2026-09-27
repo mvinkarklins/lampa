@@ -1,6 +1,6 @@
 # lampa-sync
 
-A tiny sync server for the [profiles](../README.md#profiles) plugin. Node.js with no dependencies; data is stored as JSON files on disk.
+A tiny sync server for the [profiles](../docs/profiles.md) plugin. Node.js with no dependencies; data is stored as JSON files on disk.
 
 It has **no authentication**. Run it only inside your home network or behind a VPN such as Tailscale: anyone who can reach it can read and change every profile, including the parser API key shared through it.
 
