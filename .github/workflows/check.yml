@@ -69,7 +69,7 @@ jobs:
   # fails if a tracked file contains something that looks like a key, token or password;
   # mark a false positive with a trailing "pragma: allowlist secret" comment on its line
   secrets-files:
-    name: 'Secrets: tracked files (detect-secrets)'
+    name: 'Scan: secrets in tracked files (detect-secrets)'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -80,7 +80,7 @@ jobs:
       - run: git ls-files -z | xargs -0 detect-secrets-hook
 
   secrets-history:
-    name: 'Secrets: git history (gitleaks)'
+    name: 'Scan: secrets in git history (gitleaks)'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
