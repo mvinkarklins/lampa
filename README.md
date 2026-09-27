@@ -1,4 +1,4 @@
-# Lampa plugins
+# Lampa plugins.
 
 Plugins for [Lampa](https://github.com/yumata/lampa), a media center app for TVs, Android and browsers. The plugins' interface is in Russian, like Lampa itself.
 
