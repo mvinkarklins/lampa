@@ -2,6 +2,10 @@
 
 Releases are git tags served through jsDelivr (`@latest` is the newest tag). Each plugin also has its own `VERSION` constant.
 
+## Unreleased
+
+- CI scans all tracked files for secrets with detect-secrets; the image is published only if the scan passes. False positives are marked with a `pragma: allowlist secret` comment on their line.
+
 ## v3.0.1 — 2026-09-27
 
 - Repository layout: short README with a plugin index, per-plugin docs and Neo screenshots in `docs/`, `sync/README.md` for the sync server, MIT license, GitHub Actions for syntax checks and jsDelivr cache purge on release.

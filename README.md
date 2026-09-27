@@ -44,7 +44,7 @@ The script tags the commit, pushes the tag and purges the jsDelivr `@latest` cac
 | `sync/` | the profile sync server |
 | `release.sh` | release all plugins: tag, push, purge the jsDelivr cache |
 | `tests/` | smoke test: builds Lampa from source and checks every plugin in headless Chromium; unit test for LG tracks |
-| `.github/workflows/` | checks and tests on every push and weekly; publishes the sync server image to `ghcr.io/mvinkarklins/lampa-sync`; purges the jsDelivr cache on every tag |
+| `.github/workflows/` | checks, a secret scan (detect-secrets) and tests on every push and weekly; publishes the sync server image to `ghcr.io/mvinkarklins/lampa-sync`; purges the jsDelivr cache on every tag |
 | `CHANGELOG.md` | changes per release |
 
 The Stremio addon has moved to its own repository, [stremio-hits](https://github.com/mvinkarklins/stremio-hits).

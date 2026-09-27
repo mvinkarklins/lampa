@@ -10,7 +10,7 @@ on:
 
 env:
   # Lampa commit the tests run against; the weekly run uses the latest main instead
-  LAMPA_REF: a19a8012a6ca4bef2442d31a61dc65dceda0701f
+  LAMPA_REF: a19a8012a6ca4bef2442d31a61dc65dceda0701f  # pragma: allowlist secret (a git commit, not a secret)
   IMAGE: ghcr.io/${{ github.repository_owner }}/lampa-sync
 
 jobs:
@@ -30,6 +30,19 @@ jobs:
             echo "ES6 syntax found in a plugin" >&2
             exit 1
           fi
+
+  # fails if a tracked file contains something that looks like a key, token or password;
+  # mark a false positive with a trailing "pragma: allowlist secret" comment on its line
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install detect-secrets==1.5.0
+      - name: Scan tracked files for secrets
+        run: git ls-files -z | xargs -0 detect-secrets-hook
 
   smoke:
     runs-on: ubuntu-latest
@@ -90,7 +103,7 @@ jobs:
   #   main   -> :edge
   #   v3.1.0 -> :3.1.0, :3.1, :latest
   publish:
-    needs: [syntax, smoke]
+    needs: [syntax, secrets, smoke]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
     permissions:
