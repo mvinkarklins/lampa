@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: sync
-          image: ghcr.io/mvinkarklins/lampa-sync:3.0.2
+          image: ghcr.io/mvinkarklins/lampa-sync:3.0.3
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
