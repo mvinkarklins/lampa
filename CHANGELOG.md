@@ -8,6 +8,7 @@ Releases are git tags served through jsDelivr (`@latest` is the newest tag). Eac
 - CI split into a 16-job pipeline: linters for plugins (syntax, ES5 via es-check), workflows (actionlint), shell scripts (shellcheck), the Dockerfile (hadolint) and documentation links (lychee); gitleaks over the full git history; Lampa and the image are built once and shared between jobs; smoke tests run against both the pinned and the latest Lampa; the image is checked on amd64 and arm64, scanned with Trivy and gets a CycloneDX SBOM; published images carry SBOM and provenance attestations; a report job summarizes the run.
 - Sync server image: npm, yarn and corepack removed (unused at runtime and the source of most known CVEs) and Alpine security updates applied; Trivy finds no fixable HIGH or CRITICAL issues. The health check uses JSON form.
 - `release.sh`: clearer check for uncommitted changes (shellcheck SC2015).
+- CI actions updated to versions running on Node.js 24 (Node 20 is deprecated on GitHub runners); jobs pinned to `ubuntu-24.04` instead of `ubuntu-latest`, which moves to Ubuntu 26 on 2026-10-19; Dependabot proposes weekly updates of actions and the Node base image.
 
 ## v3.0.1 — 2026-09-27
 

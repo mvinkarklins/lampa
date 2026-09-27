@@ -1,0 +1,16 @@
+version: 2
+updates:
+  # GitHub Actions used by the workflows
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
+
+  # base image of the sync server
+  - package-ecosystem: docker
+    directory: /sync
+    schedule:
+      interval: weekly

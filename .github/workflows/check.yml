@@ -23,10 +23,10 @@ jobs:
 
   lint-js:
     name: 'Lint: plugins (syntax, ES5)'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
       - name: Syntax check
@@ -37,30 +37,30 @@ jobs:
 
   lint-workflows:
     name: 'Lint: workflows (actionlint)'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color
 
   lint-shell:
     name: 'Lint: shell scripts (shellcheck)'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.10.0 release.sh tests/build-lampa.sh
 
   lint-dockerfile:
     name: 'Lint: Dockerfile (hadolint)'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: docker run --rm -i hadolint/hadolint:v2.12.0 < sync/Dockerfile
 
   lint-docs:
     name: 'Lint: documentation links (lychee)'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # internal links and anchors only, so the check does not depend on other sites
       - run: docker run --rm -v "$PWD:/input" -w /input lycheeverse/lychee:0.24.2 --offline --include-fragments --no-progress README.md CHANGELOG.md 'docs/*.md' sync/README.md
 
@@ -70,10 +70,10 @@ jobs:
   # mark a false positive with a trailing "pragma: allowlist secret" comment on its line
   secrets-files:
     name: 'Scan: secrets in tracked files (detect-secrets)'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - run: pip install detect-secrets==1.5.0
@@ -81,9 +81,9 @@ jobs:
 
   secrets-history:
     name: 'Scan: secrets in git history (gitleaks)'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.21.2 git /repo --no-banner --redact --verbose
@@ -92,23 +92,23 @@ jobs:
 
   unit:
     name: 'Unit: LG tracks (mocked webOS)'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
       - run: node tests/lg_tracks.test.js
 
   build-lampa:
     name: 'Build: Lampa ${{ matrix.lampa }}'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         lampa: [pinned, latest]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
       - name: Build Lampa from source
@@ -116,7 +116,7 @@ jobs:
           ref="$LAMPA_REF"
           [ "${{ matrix.lampa }}" = latest ] && ref=main
           tests/build-lampa.sh "$ref" "$RUNNER_TEMP/lampa"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: lampa-${{ matrix.lampa }}
           path: ${{ runner.temp }}/lampa/build/github/lampa
@@ -124,9 +124,9 @@ jobs:
 
   build-image:
     name: 'Build: sync server image'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: docker build -t lampa-sync:ci sync
       - name: Health check
         run: |
@@ -134,7 +134,7 @@ jobs:
           sleep 3
           curl -fsS http://127.0.0.1:8080/health
       - run: docker save lampa-sync:ci | gzip > image.tar.gz
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: image
           path: image.tar.gz
@@ -142,15 +142,15 @@ jobs:
 
   image-platforms:
     name: 'Image: runs on ${{ matrix.platform }}'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         platform: [linux/amd64, linux/arm64]
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
+      - uses: actions/checkout@v7
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
         with:
           context: sync
           platforms: ${{ matrix.platform }}
@@ -168,9 +168,9 @@ jobs:
   scan-image:
     name: 'Image: vulnerability scan (Trivy)'
     needs: build-image
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: image
       - name: Fail on fixable HIGH and CRITICAL vulnerabilities
@@ -179,13 +179,13 @@ jobs:
   sbom:
     name: 'Image: SBOM (CycloneDX)'
     needs: build-image
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: image
       - run: docker run --rm -v "$PWD:/work" aquasec/trivy:0.57.1 image --input /work/image.tar.gz --format cyclonedx --output /work/sbom.cdx.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: sbom
           path: sbom.cdx.json
@@ -193,7 +193,7 @@ jobs:
   smoke:
     name: 'Smoke: plugins in Lampa ${{ matrix.lampa }}'
     needs: [build-lampa, build-image, lint-js, unit]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # a break in Lampa's latest main is reported but does not block publishing
     continue-on-error: ${{ matrix.lampa == 'latest' }}
     strategy:
@@ -201,15 +201,15 @@ jobs:
       matrix:
         lampa: [pinned, latest]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: lampa-${{ matrix.lampa }}
           path: ${{ runner.temp }}/lampa
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: image
       - name: Start Lampa, plugin and sync servers
@@ -234,7 +234,7 @@ jobs:
       - name: Sync server log
         if: always()
         run: docker logs sync || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: screenshots-${{ matrix.lampa }}
@@ -249,28 +249,28 @@ jobs:
     name: 'Publish: ghcr.io image'
     needs: [lint-js, lint-workflows, lint-shell, lint-dockerfile, lint-docs, secrets-files, secrets-history, unit, image-platforms, scan-image, sbom, smoke]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: actions/checkout@v7
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE }}
           tags: |
             type=edge,branch=main
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           context: sync
           platforms: linux/amd64,linux/arm64
@@ -284,7 +284,7 @@ jobs:
     name: 'Report'
     needs: [lint-js, lint-workflows, lint-shell, lint-dockerfile, lint-docs, secrets-files, secrets-history, unit, build-lampa, build-image, image-platforms, scan-image, sbom, smoke, publish]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Summary of all jobs
         env:
