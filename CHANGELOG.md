@@ -2,6 +2,10 @@
 
 Releases are git tags served through jsDelivr (`@latest` is the newest tag). Each plugin also has its own `VERSION` constant.
 
+## Unreleased
+
+- Sync server: `GET /api/stats/<id>` returns per-profile viewing stats (top genres, recently watched titles, total minutes watched), computed from the `favorite` and `file_view` data already synced by the Profiles plugin — no plugin changes needed.
+
 ## v3.0.3 — 2026-09-27
 
 - GitOps: `sync/k8s.yaml` pins the release version; after publishing a release image, CI commits the new version to `main`, and Argo CD rolls it out.

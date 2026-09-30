@@ -65,6 +65,7 @@ All responses are JSON with CORS headers, including `Access-Control-Allow-Privat
 | `GET` | `/api/store/<shared\|id>` | stored values `{key: {v, t}}` |
 | `POST` | `/api/store/<shared\|id>` | merge `{key: {v, t}}`, returns the merged store |
 | `DELETE` | `/api/store/<id>` | delete a profile's data (`shared` cannot be deleted) |
+| `GET` | `/api/stats/<id>` | viewing stats derived from that profile's synced data: `{totalTitlesWatched, topGenres: [{name, count}], recentlyWatched: [title], totalMinutesWatched}` |
 | `GET` | `/health` | `{ok: true, version}`: the image version (release, `edge`, or `dev` for a local run) |
 
 Requests are logged with the client IP and user agent, which helps to see which device syncs which profile. Request bodies are limited to 20 MB.

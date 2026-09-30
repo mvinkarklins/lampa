@@ -10,7 +10,7 @@ RUN apk upgrade --no-cache \
               /usr/local/bin/yarn /usr/local/bin/yarnpkg
 
 WORKDIR /app
-COPY server.js ./
+COPY server.js stats.js ./
 # image version, passed by CI from the git tag (e.g. 3.0.2) or edge-<sha>
 ARG APP_VERSION=dev
 ENV NODE_ENV=production PORT=8080 DATA_DIR=/data APP_VERSION=$APP_VERSION
