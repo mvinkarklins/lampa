@@ -10,6 +10,7 @@
 var http = require('http');
 var fs = require('fs');
 var path = require('path');
+var stats = require('./stats');
 
 var PORT = process.env.PORT || 8080;
 var DATA_DIR = process.env.DATA_DIR || '/data';
@@ -132,6 +133,11 @@ var server = http.createServer(function (req, res) {
                 send(res, 200, { profiles: profiles });
             });
         }
+    }
+
+    // GET /api/stats/<id> — top genres, recently watched, total minutes for one profile
+    if (parts[0] === 'api' && parts[1] === 'stats' && parts.length === 3 && ID_RE.test(parts[2]) && parts[2] !== 'shared') {
+        if (req.method === 'GET') return send(res, 200, stats.computeStats(readJson(scopeName(parts[2]), {})));
     }
 
     // GET|POST|DELETE /api/store/<shared|id>

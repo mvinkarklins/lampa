@@ -99,6 +99,7 @@ jobs:
         with:
           node-version: 20
       - run: node tests/lg_tracks.test.js
+      - run: node tests/stats.test.js
 
   build-lampa:
     name: 'Build: Lampa ${{ matrix.lampa }}'
