@@ -1,0 +1,37 @@
+name: tag release
+
+# Everything else (purge jsDelivr, build/publish the sync image, pin its version in
+# sync/k8s.yaml) already runs off the tag push (see release.yml and check.yml). This just
+# creates and pushes that tag, so a release can be cut from GitHub's UI instead of a local
+# checkout with push access — release.sh still works too, this is an alternative, not a
+# replacement.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, e.g. 3.1.0 (without the v)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Validate version
+        run: |
+          echo "${{ inputs.version }}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$' \
+            || { echo "expected X.Y.Z, got '${{ inputs.version }}'" >&2; exit 1; }
+
+      - name: Tag and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "v${{ inputs.version }}"
+          git push origin "v${{ inputs.version }}"
