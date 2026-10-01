@@ -2,8 +2,9 @@
 // Lampa can pin it natively with a long press in the source picker,
 // but long press does not work on LG remotes.
 //
-// On press you choose where to search: your own parser from settings (Prowlarr),
-// a public JacRed if yours is down, or both at once. The default is also set in
+// On press you choose where to search: your own parser from Lampa's settings (any
+// Jackett-compatible one, e.g. Prowlarr), a public JacRed if yours is down, or both
+// at once. The default is also set in
 // Settings → Parser → «Кнопка «Торренты» на карточке».
 (function () {
     'use strict';
@@ -121,7 +122,7 @@
         try { last = localStorage.getItem(LAST) || 'own'; } catch (e) {}
 
         var items = [
-            { title: 'Мой парсер', subtitle: 'из настроек (Prowlarr)', choice: 'own', selected: last === 'own' },
+            { title: 'Мой парсер', subtitle: 'из настроек Lampa', choice: 'own', selected: last === 'own' },
             { title: 'Везде', subtitle: 'мой парсер + ' + PUBLIC[0] + ', без повторов', choice: BOTH, selected: last === BOTH }
         ];
         PUBLIC.forEach(function (host) {
