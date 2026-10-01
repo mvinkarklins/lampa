@@ -20,7 +20,7 @@ spec:
         kubernetes.io/hostname: nas
       containers:
         - name: sync
-          image: ghcr.io/mvinkarklins/lampa-sync:3.0.3
+          image: ghcr.io/mvinkarklins/lampa-sync:4.0.1
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
