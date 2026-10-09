@@ -15,9 +15,9 @@ spec:
       labels:
         app: lampa-sync
     spec:
-      # data is a hostPath on the NAS
+      # data is a hostPath, moved off the memory-tight NAS to server3 (2026-10-09)
       nodeSelector:
-        kubernetes.io/hostname: nas
+        kubernetes.io/hostname: server3
       containers:
         - name: sync
           image: ghcr.io/mvinkarklins/lampa-sync:4.0.1
