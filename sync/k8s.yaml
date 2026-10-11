@@ -24,7 +24,7 @@ spec:
         kubernetes.io/hostname: server3
       containers:
         - name: sync
-          image: ghcr.io/mvinkarklins/lampa-sync:3.1.1
+          image: ghcr.io/mvinkarklins/lampa-sync:3.2.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
