@@ -15,7 +15,7 @@
     if (window.torbox_plugin) return;
     window.torbox_plugin = true;
 
-    var VERSION = '1.0.0';
+    var VERSION = '1.0.1';
     var KEY_STORAGE = 'torbox_key';
     var POLL_INTERVAL = 4000;
     var POLL_MAX_TRIES = 45; // ~3 minutes of polling before giving up
@@ -56,6 +56,7 @@
         var xhr = new XMLHttpRequest();
         xhr.open(opts.method || 'GET', base + '/api/torbox/' + path + (qs ? '?' + qs : ''), true);
         xhr.setRequestHeader('Authorization', 'Bearer ' + key);
+        if (opts.json) xhr.setRequestHeader('Content-Type', 'application/json');
         xhr.timeout = 30000;
         xhr.onload = function () {
             var json = null;
@@ -65,14 +66,16 @@
         };
         xhr.onerror = function () { fail('ошибка сети'); };
         xhr.ontimeout = function () { fail('не отвечает'); };
-        xhr.send(opts.form || null);
+        xhr.send(opts.json ? JSON.stringify(opts.json) : (opts.form || null));
     }
 
-    function createTorrent(magnet, done, fail) {
-        var fd = new FormData();
-        fd.append('magnet', magnet);
-        fd.append('seed', '1');
-        torboxJson('torrents/createtorrent', '', { method: 'POST', form: fd }, done, fail);
+    // `link` is whatever the search result gave us -- a real magnet: URI, or (most trackers)
+    // an http(s) link to a .torrent file. The sync server tells them apart: a real magnet goes
+    // straight to TorBox, anything else gets fetched server-side and uploaded as a file --
+    // the browser can't fetch most tracker links itself (no CORS, often needs the same auth
+    // as the search).
+    function createTorrent(link, done, fail) {
+        torboxJson('addtorrent', '', { method: 'POST', json: { url: link } }, done, fail);
     }
 
     function pollUntilReady(torrentId, movie, tries) {

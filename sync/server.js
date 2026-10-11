@@ -101,6 +101,62 @@ function scopeName(id) {
     return id === 'shared' ? 'shared' : 'p_' + id;
 }
 
+// POST /api/torbox/addtorrent  { url: '<magnet: URI or http(s) link to a .torrent file>' }
+// Most search results (RuTracker, private trackers, etc.) don't have a real magnet -- only an
+// http(s) link that serves a .torrent file, which the browser can't fetch itself (most
+// trackers don't send CORS headers, and it's often behind the same auth as the search). So
+// for anything that isn't already "magnet:", this endpoint fetches the file server-side and
+// uploads its bytes to TorBox as a file, instead of (wrongly) passing the http(s) URL to
+// TorBox's magnet field. Does not log or store the API key or the fetched file.
+function handleTorboxAddTorrent(req, res) {
+    readBody(req, function (err, body) {
+        if (err || !body || typeof body.url !== 'string' || !body.url) return send(res, 400, { error: 'bad body' });
+        if (!req.headers.authorization) return send(res, 401, { error: 'missing Authorization' });
+
+        var auth = req.headers.authorization;
+        var url = body.url;
+
+        function postToTorbox(form) {
+            fetch('https://' + TORBOX_HOST + '/v1/api/torrents/createtorrent', {
+                method: 'POST',
+                headers: { authorization: auth },
+                body: form,
+                signal: AbortSignal.timeout(TORBOX_TIMEOUT)
+            }).then(function (r) {
+                return r.text().then(function (text) {
+                    res.writeHead(r.status, {
+                        'Content-Type': r.headers.get('content-type') || 'application/json',
+                        'Access-Control-Allow-Origin': '*',
+                        'Cache-Control': 'no-store'
+                    });
+                    res.end(text);
+                });
+            }).catch(function (e) {
+                send(res, 502, { error: 'torbox upstream error: ' + e.message });
+            });
+        }
+
+        if (/^magnet:/i.test(url)) {
+            var magnetForm = new FormData();
+            magnetForm.append('magnet', url);
+            magnetForm.append('seed', '1');
+            return postToTorbox(magnetForm);
+        }
+
+        fetch(url, { signal: AbortSignal.timeout(TORBOX_TIMEOUT) }).then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.arrayBuffer();
+        }).then(function (buf) {
+            var fileForm = new FormData();
+            fileForm.append('file', new Blob([buf]), 'torrent.torrent');
+            fileForm.append('seed', '1');
+            postToTorbox(fileForm);
+        }).catch(function (e) {
+            send(res, 502, { error: 'failed to fetch torrent link: ' + e.message });
+        });
+    });
+}
+
 // Reverse proxy for the TorBox API: the browser can't call api.torbox.app directly (it
 // requires a custom Authorization header, which triggers a CORS preflight TorBox doesn't
 // answer). We only relay bytes -- method, query string, Authorization/Content-Type, and the
@@ -152,6 +208,11 @@ var server = http.createServer(function (req, res) {
     if (req.method === 'OPTIONS') return send(res, 204);
 
     if (url === '/health') return send(res, 200, { ok: true, version: VERSION });
+
+    // POST /api/torbox/addtorrent -- magnet, or a torrent-file link fetched and uploaded here
+    if (parts[0] === 'api' && parts[1] === 'torbox' && parts[2] === 'addtorrent' && parts.length === 3 && req.method === 'POST') {
+        return handleTorboxAddTorrent(req, res);
+    }
 
     // ALL /api/torbox/<path...> -> https://api.torbox.app/v1/api/<path...>
     if (parts[0] === 'api' && parts[1] === 'torbox' && parts.length > 2) {

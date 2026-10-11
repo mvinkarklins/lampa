@@ -4,6 +4,8 @@ Releases are git tags served through jsDelivr (`@latest` is the newest tag). Eac
 
 ## Unreleased
 
+- Fix: TorBox (`torbox.js` 1.0.1) sent whatever URL a search result had straight to TorBox's `magnet` field, including plain http(s) links to a `.torrent` file (most trackers don't give a real `magnet:` URI) — TorBox correctly rejected those as "Invalid Magnet Link". New sync server endpoint `POST /api/torbox/addtorrent` tells the two apart: a real magnet goes straight through, anything else is fetched server-side and uploaded to TorBox as a file (the browser can't fetch most tracker links itself — no CORS, often needs the same session as the search).
+
 ## v3.1.0 — 2026-10-11
 
 - New plugin: TorBox (`torbox.js`) — a «TorBox» button on the movie card streams a torrent straight from TorBox's cache, no local download. Reuses your existing parser (same `Lampa.Parser.get` as the Torrents button) for search; only the few lightweight TorBox API calls go through the sync server's new `/api/torbox/*` proxy (added because TorBox's API needs a header browsers won't send cross-origin) — the actual video streams directly from TorBox's CDN, never through the sync server.
