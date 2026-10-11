@@ -4,6 +4,10 @@ Releases are git tags served through jsDelivr (`@latest` is the newest tag). Eac
 
 ## Unreleased
 
+## v3.2.0 — 2026-10-11
+
+- TorBox (`torbox.js` 1.1.0): release list shows a language/voiceover badge (`Дубляж`, `Многоголосый`, `ENG`, ...) parsed from the title, since trackers don't send structured language metadata and the full title can get truncated on screen before that text is reached.
+
 ## v3.1.1 — 2026-10-11
 
 - Fix: TorBox (`torbox.js` 1.0.1) sent whatever URL a search result had straight to TorBox's `magnet` field, including plain http(s) links to a `.torrent` file (most trackers don't give a real `magnet:` URI) — TorBox correctly rejected those as "Invalid Magnet Link". New sync server endpoint `POST /api/torbox/addtorrent` tells the two apart: a real magnet goes straight through, anything else is fetched server-side and uploaded to TorBox as a file (the browser can't fetch most tracker links itself — no CORS, often needs the same session as the search).
