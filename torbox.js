@@ -15,7 +15,7 @@
     if (window.torbox_plugin) return;
     window.torbox_plugin = true;
 
-    var VERSION = '1.2.0';
+    var VERSION = '1.3.0';
     var KEY_STORAGE = 'torbox_key';
     var POLL_INTERVAL = 4000;
     var POLL_MAX_TRIES = 45; // ~3 minutes of polling before giving up
@@ -185,9 +185,81 @@
         return PRIORITY_TRACKERS.length;
     }
 
-    function showResults(movie, data) {
-        var results = (data && data.Results) || [];
-        if (!results.length) return Lampa.Noty.show('TorBox: ничего не нашлось');
+    // Same idea as languageHint: quality only ever shows up as text in the title.
+    function qualityHint(title) {
+        var t = title || '';
+        if (/\b4k\b|2160p/i.test(t)) return '4K';
+        if (/1080p/i.test(t)) return '1080p';
+        if (/720p/i.test(t)) return '720p';
+        if (/480p/i.test(t)) return '480p';
+        if (/web-?dl/i.test(t)) return 'WEB-DL';
+        if (/web-?rip/i.test(t)) return 'WEBRip';
+        if (/bd-?rip|blu-?ray/i.test(t)) return 'BDRip';
+        if (/hd-?rip/i.test(t)) return 'HDRip';
+        if (/hdtv/i.test(t)) return 'HDTV';
+        return '';
+    }
+
+    // Reset per search(); holds the current quality/tracker picks from the filter menu.
+    var filter = { quality: '', tracker: '' };
+
+    function matchesFilter(r) {
+        if (filter.quality && qualityHint(r.Title) !== filter.quality) return false;
+        if (filter.tracker && r.Tracker !== filter.tracker) return false;
+        return true;
+    }
+
+    function filterLabel() {
+        var parts = [];
+        if (filter.quality) parts.push(filter.quality);
+        if (filter.tracker) parts.push(filter.tracker);
+        return parts.length ? parts.join(', ') : 'выкл';
+    }
+
+    function uniqueSorted(values) {
+        var seen = {}, out = [];
+        values.forEach(function (v) {
+            if (v && !seen[v]) { seen[v] = true; out.push(v); }
+        });
+        out.sort();
+        return out;
+    }
+
+    function openFilterMenu(movie, allResults) {
+        Lampa.Select.show({
+            title: 'Фильтр (сейчас: ' + filterLabel() + ')',
+            items: [
+                { title: 'Качество: ' + (filter.quality || 'любое'), pick: 'quality' },
+                { title: 'Трекер: ' + (filter.tracker || 'любой'), pick: 'tracker' },
+                { title: 'Сбросить фильтр', pick: 'reset' }
+            ],
+            onSelect: function (item) {
+                if (item.pick === 'reset') {
+                    filter = { quality: '', tracker: '' };
+                    return renderResults(movie, allResults);
+                }
+
+                var values = item.pick === 'quality'
+                    ? uniqueSorted(allResults.map(function (r) { return qualityHint(r.Title); }))
+                    : uniqueSorted(allResults.map(function (r) { return r.Tracker; }));
+
+                Lampa.Select.show({
+                    title: item.pick === 'quality' ? 'Качество' : 'Трекер',
+                    items: [{ title: item.pick === 'quality' ? 'Любое' : 'Любой', value: '' }]
+                        .concat(values.map(function (v) { return { title: v, value: v }; })),
+                    onSelect: function (vi) {
+                        filter[item.pick] = vi.value;
+                        renderResults(movie, allResults);
+                    },
+                    onBack: function () { openFilterMenu(movie, allResults); }
+                });
+            },
+            onBack: function () { renderResults(movie, allResults); }
+        });
+    }
+
+    function renderResults(movie, allResults) {
+        var results = allResults.filter(matchesFilter);
 
         results.sort(function (a, b) {
             var pa = trackerPriority(a.Tracker), pb = trackerPriority(b.Tracker);
@@ -195,19 +267,34 @@
             return (b.Seeders || 0) - (a.Seeders || 0);
         });
 
+        var releaseItems = results.slice(0, 50).map(function (r) {
+            var lang = languageHint(r.Title);
+            return {
+                title: r.Title,
+                subtitle: (lang ? '[' + lang + '] ' : '') + (r.size || '') + ' · ' + (r.Seeders || 0) + ' seeders · ' + (r.Tracker || ''),
+                result: r
+            };
+        });
+
+        if (!releaseItems.length) return Lampa.Noty.show('TorBox: по текущему фильтру ничего нет');
+
         Lampa.Select.show({
-            title: 'TorBox: выбери релиз',
-            items: results.slice(0, 50).map(function (r) {
-                var lang = languageHint(r.Title);
-                return {
-                    title: r.Title,
-                    subtitle: (lang ? '[' + lang + '] ' : '') + (r.size || '') + ' · ' + (r.Seeders || 0) + ' seeders · ' + (r.Tracker || ''),
-                    result: r
-                };
-            }),
-            onSelect: function (item) { streamViaTorbox(item.result, movie); },
+            title: 'TorBox: выбери релиз (' + results.length + ')',
+            items: [{ title: '⚙ Фильтр (' + filterLabel() + ')', isFilter: true }].concat(releaseItems),
+            onSelect: function (item) {
+                if (item.isFilter) return openFilterMenu(movie, allResults);
+                streamViaTorbox(item.result, movie);
+            },
             onBack: function () { Lampa.Controller.toggle('full_start'); }
         });
+    }
+
+    function showResults(movie, data) {
+        var results = (data && data.Results) || [];
+        if (!results.length) return Lampa.Noty.show('TorBox: ничего не нашлось');
+
+        filter = { quality: '', tracker: '' };
+        renderResults(movie, results);
     }
 
     function search(movie) {
