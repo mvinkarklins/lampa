@@ -15,7 +15,7 @@
     if (window.torbox_plugin) return;
     window.torbox_plugin = true;
 
-    var VERSION = '1.1.0';
+    var VERSION = '1.2.0';
     var KEY_STORAGE = 'torbox_key';
     var POLL_INTERVAL = 4000;
     var POLL_MAX_TRIES = 45; // ~3 minutes of polling before giving up
@@ -173,11 +173,27 @@
         return '';
     }
 
+    // Preferred trackers float to the top (in this order), each group still sorted by seeders;
+    // everything else follows, also by seeders.
+    var PRIORITY_TRACKERS = ['kinozal', 'rutracker', 'rutor'];
+
+    function trackerPriority(tracker) {
+        var t = (tracker || '').toLowerCase();
+        for (var i = 0; i < PRIORITY_TRACKERS.length; i++) {
+            if (t.indexOf(PRIORITY_TRACKERS[i]) !== -1) return i;
+        }
+        return PRIORITY_TRACKERS.length;
+    }
+
     function showResults(movie, data) {
         var results = (data && data.Results) || [];
         if (!results.length) return Lampa.Noty.show('TorBox: ничего не нашлось');
 
-        results.sort(function (a, b) { return (b.Seeders || 0) - (a.Seeders || 0); });
+        results.sort(function (a, b) {
+            var pa = trackerPriority(a.Tracker), pb = trackerPriority(b.Tracker);
+            if (pa !== pb) return pa - pb;
+            return (b.Seeders || 0) - (a.Seeders || 0);
+        });
 
         Lampa.Select.show({
             title: 'TorBox: выбери релиз',

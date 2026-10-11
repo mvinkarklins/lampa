@@ -4,6 +4,10 @@ Releases are git tags served through jsDelivr (`@latest` is the newest tag). Eac
 
 ## Unreleased
 
+## v3.3.0 — 2026-10-11
+
+- TorBox (`torbox.js` 1.2.0): results from Kinozal, RuTracker and RuTor float to the top of the release list (in that order), each group still sorted by seeders; everything else follows, also by seeders.
+
 ## v3.2.0 — 2026-10-11
 
 - TorBox (`torbox.js` 1.1.0): release list shows a language/voiceover badge (`Дубляж`, `Многоголосый`, `ENG`, ...) parsed from the title, since trackers don't send structured language metadata and the full title can get truncated on screen before that text is reached.
