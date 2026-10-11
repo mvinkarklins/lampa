@@ -8,6 +8,7 @@
 // on merge the later time wins.
 
 var http = require('http');
+var https = require('https');
 var fs = require('fs');
 var path = require('path');
 var stats = require('./stats');
@@ -18,6 +19,8 @@ var DATA_DIR = process.env.DATA_DIR || '/data';
 var VERSION = process.env.APP_VERSION || 'dev';
 var MAX_BODY = 20 * 1024 * 1024;
 var ID_RE = /^[a-z0-9_-]{1,32}$/;
+var TORBOX_HOST = 'api.torbox.app';
+var TORBOX_TIMEOUT = 30000;
 
 function file(name) {
     return path.join(DATA_DIR, name + '.json');
@@ -98,6 +101,41 @@ function scopeName(id) {
     return id === 'shared' ? 'shared' : 'p_' + id;
 }
 
+// Reverse proxy for the TorBox API: the browser can't call api.torbox.app directly (it
+// requires a custom Authorization header, which triggers a CORS preflight TorBox doesn't
+// answer). We only relay bytes -- method, query string, Authorization/Content-Type, and the
+// raw body -- straight through to https://api.torbox.app/v1/api/<path>. The user's own API
+// key passes through untouched; this server never reads, logs, or stores it.
+function proxyTorbox(req, res, torboxPath, query) {
+    var options = {
+        hostname: TORBOX_HOST,
+        path: '/v1/api/' + torboxPath + (query ? '?' + query : ''),
+        method: req.method,
+        headers: {},
+        timeout: TORBOX_TIMEOUT
+    };
+    if (req.headers.authorization) options.headers.authorization = req.headers.authorization;
+    if (req.headers['content-type']) options.headers['content-type'] = req.headers['content-type'];
+
+    var upstream = https.request(options, function (upRes) {
+        res.writeHead(upRes.statusCode, {
+            'Content-Type': upRes.headers['content-type'] || 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': '*',
+            'Access-Control-Allow-Private-Network': 'true',
+            'Cache-Control': 'no-store'
+        });
+        upRes.pipe(res);
+    });
+    upstream.on('timeout', function () { upstream.destroy(new Error('timeout')); });
+    upstream.on('error', function (e) {
+        if (res.headersSent) return res.end();
+        send(res, 502, { error: 'torbox upstream error: ' + e.message });
+    });
+    req.pipe(upstream);
+}
+
 var server = http.createServer(function (req, res) {
     var url = req.url.split('?')[0];
 
@@ -114,6 +152,11 @@ var server = http.createServer(function (req, res) {
     if (req.method === 'OPTIONS') return send(res, 204);
 
     if (url === '/health') return send(res, 200, { ok: true, version: VERSION });
+
+    // ALL /api/torbox/<path...> -> https://api.torbox.app/v1/api/<path...>
+    if (parts[0] === 'api' && parts[1] === 'torbox' && parts.length > 2) {
+        return proxyTorbox(req, res, parts.slice(2).join('/'), req.url.split('?')[1]);
+    }
 
     // GET /api/profiles, PUT /api/profiles
     if (parts[0] === 'api' && parts[1] === 'profiles' && parts.length === 2) {

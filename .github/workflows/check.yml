@@ -33,7 +33,7 @@ jobs:
         run: for f in ./*.js sync/*.js tests/*.js; do node --check "$f"; done
       # plugins run on old TV browsers, so they must parse as ES5
       - name: ES5 check
-        run: npx --yes es-check@8 es5 ./kids_age.js ./torrent_button.js ./neo.js ./lg_tracks.js ./profiles.js
+        run: npx --yes es-check@8 es5 ./kids_age.js ./torrent_button.js ./neo.js ./lg_tracks.js ./profiles.js ./torbox.js
 
   lint-workflows:
     name: 'Lint: workflows (actionlint)'
