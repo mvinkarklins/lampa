@@ -15,7 +15,7 @@
     if (window.torbox_plugin) return;
     window.torbox_plugin = true;
 
-    var VERSION = '1.0.1';
+    var VERSION = '1.1.0';
     var KEY_STORAGE = 'torbox_key';
     var POLL_INTERVAL = 4000;
     var POLL_MAX_TRIES = 45; // ~3 minutes of polling before giving up
@@ -159,6 +159,20 @@
         }, function (err) { Lampa.Noty.show('TorBox: ' + err); });
     }
 
+    // Trackers don't send structured language metadata -- it only ever shows up as text in
+    // the release title ("Александр Башков", "MVO", "Дубляж", ...), which Lampa's list can
+    // truncate before that text is reached. Pull out a short badge so it's always visible.
+    function languageHint(title) {
+        var t = title || '';
+        if (/многоголос|\bmvo\b/i.test(t)) return 'Многоголосый';
+        if (/двухголос|\bdvo\b/i.test(t)) return 'Двухголосый';
+        if (/одноголос/i.test(t)) return 'Одноголосый';
+        if (/дубляж|dub(bed)?\b/i.test(t)) return 'Дубляж';
+        if (/\bsub(s|titles)?\b|субтитр/i.test(t) && !/\bru[sz]?\b|рус/i.test(t)) return 'Субтитры';
+        if (/\b(eng|english)\b/i.test(t) && !/\bru[sz]?\b|рус/i.test(t)) return 'ENG';
+        return '';
+    }
+
     function showResults(movie, data) {
         var results = (data && data.Results) || [];
         if (!results.length) return Lampa.Noty.show('TorBox: ничего не нашлось');
@@ -168,9 +182,10 @@
         Lampa.Select.show({
             title: 'TorBox: выбери релиз',
             items: results.slice(0, 50).map(function (r) {
+                var lang = languageHint(r.Title);
                 return {
                     title: r.Title,
-                    subtitle: (r.size || '') + ' · ' + (r.Seeders || 0) + ' seeders · ' + (r.Tracker || ''),
+                    subtitle: (lang ? '[' + lang + '] ' : '') + (r.size || '') + ' · ' + (r.Seeders || 0) + ' seeders · ' + (r.Tracker || ''),
                     result: r
                 };
             }),
