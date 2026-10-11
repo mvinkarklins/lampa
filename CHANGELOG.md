@@ -4,6 +4,10 @@ Releases are git tags served through jsDelivr (`@latest` is the newest tag). Eac
 
 ## Unreleased
 
+## v3.4.0 — 2026-10-11
+
+- TorBox (`torbox.js` 1.3.0): «Фильтр» item at the top of the release list — filter by quality (1080p/720p/4K/WEB-DL/...) and tracker, both parsed from the results themselves. Stays applied while browsing; «Сбросить фильтр» clears it.
+
 ## v3.3.0 — 2026-10-11
 
 - TorBox (`torbox.js` 1.2.0): results from Kinozal, RuTracker and RuTor float to the top of the release list (in that order), each group still sorted by seeders; everything else follows, also by seeders.
