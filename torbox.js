@@ -21,6 +21,13 @@
     var POLL_MAX_TRIES = 45; // ~3 minutes of polling before giving up
     var VIDEO_EXT = /\.(mkv|mp4|avi|ts|m4v|webm)$/i;
 
+    // cloud + play arrow, distinct from the native torrent (magnet) icon -- this streams from
+    // TorBox's cache, it doesn't download a torrent locally
+    var ICON = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+        '<path d="M7 18a4.5 4.5 0 0 1-.5-8.98A5.5 5.5 0 0 1 17 8.5a4 4 0 0 1-.6 7.98" ' +
+        'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '<path d="M11.5 12.5 14.5 14.5 11.5 16.5z" fill="currentColor"/></svg>';
+
     function syncBase() {
         var u = Lampa.Storage.get('nsync_url', '') || '';
         return u.replace(/\/+$/, '');
@@ -216,6 +223,7 @@
             .removeClass('view--torrent hide')
             .addClass('selector button--torbox');
 
+        button.find('svg').replaceWith(ICON);
         button.find('span').text('TorBox');
 
         button.on('hover:enter', function () { search(movie); });
