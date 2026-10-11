@@ -16,7 +16,7 @@ LAMPA = os.environ.get('LAMPA_URL', 'https://yumata.github.io/lampa/')
 BASE = os.environ.get('PLUGIN_BASE', 'http://127.0.0.1:8090/')
 SYNC = os.environ.get('SYNC_URL', 'http://127.0.0.1:8080')
 SHOTS = os.environ.get('SHOTS', 'shots')
-PLUGINS = ['kids_age.js', 'torrent_button.js', 'neo.js', 'lg_tracks.js', 'profiles.js']
+PLUGINS = ['kids_age.js', 'torrent_button.js', 'neo.js', 'lg_tracks.js', 'profiles.js', 'torbox.js']
 
 INIT = """
 localStorage.setItem('language', 'ru');
@@ -52,12 +52,14 @@ async def main():
         try:
             await page.wait_for_function(
                 "window.appready && window.kids_age_plugin_api && window.torrent_button_plugin && "
-                "window.neo_plugin_api && window.lg_tracks_plugin && window.nas_profiles_plugin_api",
+                "window.neo_plugin_api && window.lg_tracks_plugin && window.nas_profiles_plugin_api && "
+                "window.torbox_plugin",
                 timeout=45000)
             check('all plugins loaded', True)
         except Exception:
             loaded = await page.evaluate("""() => ({kids: !!window.kids_age_plugin_api, torrents: !!window.torrent_button_plugin,
-                neo: !!window.neo_plugin_api, lg_tracks: !!window.lg_tracks_plugin, profiles: !!window.nas_profiles_plugin_api})""")
+                neo: !!window.neo_plugin_api, lg_tracks: !!window.lg_tracks_plugin, profiles: !!window.nas_profiles_plugin_api,
+                torbox: !!window.torbox_plugin})""")
             check('all plugins loaded', False, json.dumps(loaded))
 
         await page.wait_for_timeout(8000)
@@ -86,6 +88,7 @@ async def main():
         await page.screenshot(path=SHOTS + '/3-card.png')
 
         check('torrents: «Торренты» button on the movie card', await page.query_selector('.button--torrent-direct'))
+        check('torbox: «TorBox» button on the movie card', await page.query_selector('.button--torbox'))
 
         # profiles: the first device creates the «Основной» profile on the sync server
         await page.wait_for_timeout(2000)

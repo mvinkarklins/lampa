@@ -9,6 +9,7 @@ Plugins for [Lampa](https://github.com/yumata/lampa), a media center app for TVs
 | [Neo interface](docs/neo.md) | a redesigned Lampa with five themes | `https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/neo.js` |
 | [LG tracks](docs/lg-tracks.md) | audio track picker in the player on LG TVs | `https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/lg_tracks.js` |
 | [Profiles](docs/profiles.md) | profiles and sync through your own [server](sync/README.md) | `https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/profiles.js` |
+| [TorBox](docs/torbox.md) | stream a torrent via TorBox, no local download | `https://cdn.jsdelivr.net/gh/mvinkarklins/lampa@latest/torbox.js` |
 
 ## Install
 
