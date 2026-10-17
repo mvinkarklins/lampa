@@ -15,6 +15,8 @@ spec:
       labels:
         app: lampa-sync
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: nas
       containers:
         - name: sync
           image: ghcr.io/mvinkarklins/lampa-sync:3.4.0
