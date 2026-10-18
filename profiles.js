@@ -7,7 +7,7 @@
     if (window.nas_profiles_plugin) return;
     window.nas_profiles_plugin = true;
 
-    var VERSION = '1.7.0';
+    var VERSION = '1.7.1';
     var DEFAULT_URL = 'http://192.168.1.25';
     var SYNC_EVERY = 5 * 60 * 1000;
     var PUSH_DELAY = 5000;
@@ -27,6 +27,8 @@
         'parser_use', 'parser_torrent_type', 'parser_use_link', 'parse_lang',
         'prowlarr_url', 'prowlarr_key', 'prowlarr_url_two', 'prowlarr_key_two',
         'jackett_url', 'jackett_key', 'jackett_url_two', 'jackett_key_two',
+        // TorBox API key (torbox.js)
+        'torbox_key',
         // installed plugins list; Lampa must restart after it changes
         'plugins'];
 

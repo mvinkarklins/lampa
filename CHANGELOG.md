@@ -4,6 +4,8 @@ Releases are git tags served through jsDelivr (`@latest` is the newest tag). Eac
 
 ## Unreleased
 
+- Fix: Profiles (`profiles.js` 1.7.1) didn't sync the TorBox API key (`torbox_key`) between devices — it was missing from `SHARED_KEYS`, unlike the Prowlarr/Jackett/TorrServer settings next to it. Entering the key on one device now carries it to the rest on the next sync.
+
 ## v3.4.0 — 2026-10-11
 
 - TorBox (`torbox.js` 1.3.0): «Фильтр» item at the top of the release list — filter by quality (1080p/720p/4K/WEB-DL/...) and tracker, both parsed from the results themselves. Stays applied while browsing; «Сбросить фильтр» clears it.
