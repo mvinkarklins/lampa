@@ -4,6 +4,10 @@ Releases are git tags served through jsDelivr (`@latest` is the newest tag). Eac
 
 ## Unreleased
 
+- Fix: TorBox (`torbox.js` 1.3.1) always reported "не настроен сервер синхронизации" when adding a magnet/checking status/asking for a play link, even with Profiles' sync server configured — it read the server address through `Lampa.Storage.get('nsync_url')`, but Profiles (`profiles.js`) deliberately stores that address in plain `localStorage`, bypassing `Lampa.Storage`, so it never gets swept into profile sync. TorBox now reads the same `localStorage` key, with the same default address, that Profiles writes to.
+
+## v3.4.1 — 2026-10-18
+
 - Fix: Profiles (`profiles.js` 1.7.1) didn't sync the TorBox API key (`torbox_key`) between devices — it was missing from `SHARED_KEYS`, unlike the Prowlarr/Jackett/TorrServer settings next to it. Entering the key on one device now carries it to the rest on the next sync.
 
 ## v3.4.0 — 2026-10-11

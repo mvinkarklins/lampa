@@ -15,7 +15,7 @@
     if (window.torbox_plugin) return;
     window.torbox_plugin = true;
 
-    var VERSION = '1.3.0';
+    var VERSION = '1.3.1';
     var KEY_STORAGE = 'torbox_key';
     var POLL_INTERVAL = 4000;
     var POLL_MAX_TRIES = 45; // ~3 minutes of polling before giving up
@@ -28,9 +28,15 @@
         'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' +
         '<path d="M11.5 12.5 14.5 14.5 11.5 16.5z" fill="currentColor"/></svg>';
 
+    // Profiles (profiles.js) deliberately keeps its server address in plain localStorage,
+    // bypassing Lampa.Storage, so that the address itself never gets swept into profile sync.
+    // Read it the same way, with the same default, or we'd always see it as unset.
+    var DEFAULT_SYNC_URL = 'http://192.168.1.25';
+
     function syncBase() {
-        var u = Lampa.Storage.get('nsync_url', '') || '';
-        return u.replace(/\/+$/, '');
+        var u = '';
+        try { u = localStorage.getItem('nsync_url') || ''; } catch (e) {}
+        return (u || DEFAULT_SYNC_URL).replace(/\/+$/, '');
     }
 
     function apiKey() {
